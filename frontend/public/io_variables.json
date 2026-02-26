@@ -1,0 +1,938 @@
+{
+  "warningLightRed_Y14C": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "비상정지 상태"
+  },
+  "warningLightYellow_Y14D": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 알람 상태"
+  },
+  "warningLightGreen_Y14E": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 운전준비"
+  },
+  "towerLampBuzzer_Y14F": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "비상 시 경고음 동작"
+  },
+  "warningLightRedCircleType_Y107": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "안전사다리 리미트 해제 (크라운 상부에 사람 진입 주의 필요)"
+  },
+  "melodyPhone_Y109": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "안전사다리 리미트 해제 (크라운 상부에 사람 진입 주의 필요)"
+  },
+  "emergencyStopRF_M300": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 업라이트(우/전) 설치"
+  },
+  "emergencyStopLF_M301": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 업라이트(좌/전) 설치"
+  },
+  "emergencyStopRR_M302": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 업라이트(우/후) 설치"
+  },
+  "emergencyStopLR_M303": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 업라이트(좌/전) 설치"
+  },
+  "emergencyStopPortableRF_M304": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 양수조작반(우/전) 설치"
+  },
+  "emergencyStopPortableLR_M305": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 양수조작반(좌/후) 설치"
+  },
+  "emergencyStopCrown_M306": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스의 비상 정지에 사용하며, 크라운 후면 설치"
+  },
+  "electricCamAlarm_M307": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "각도 지시장치 오류 및 고장으로 인한 알람(슬라이드 각도 엔코더)"
+  },
+  "cBRelayWeld_M308": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 기동 신호 관련 파워 릴레이 융착 현상 발생"
+  },
+  "clutchValveError_M309": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "클러치 솔밸브 공압 이상 발생"
+  },
+  "brakeValveError_M310": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "브레이크 솔밸브 공압 이상 발생"
+  },
+  "analogUnitError_M311": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "PLC 아날로그 입력카드 이상 발생"
+  },
+  "slideAdjustDeviceError_M312": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "슬라이드 어저스트 엔코더 및 컨트롤러가 이상이 발생"
+  },
+  "None1_M313": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "mainInverterAlarm_M314": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "메인 모터용 인버터 이상 알람 발생"
+  },
+  "brakeUnitAlarm_M315": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "제동유닛 이상 발생"
+  },
+  "brakeResistorAlarm_M316": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "제동저항 이상 발생"
+  },
+  "slideAdjustMotorTrip_M317": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "슬라이드 조절 모터 과부하로 인한 차단기 트립 발생"
+  },
+  "lubricationPumpMotorTrip_M318": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활 펌프 모터 과부하로 인한 차단기 트립 발생"
+  },
+  "None2_M319": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None3_M320": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None4_M321": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None5_M322": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None6_M323": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None7_M324": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None8_M325": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None9_M326": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "cBPumpMotorTrip_M327": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "클러치/브레이크 펌프 모터 과부하로 인한 차단기 트립 발생"
+  },
+  "cBCoolingMotorTrip_M328": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "클러치/브레이크 오일 냉각 모터 과부하로 인한 차단기 트립 발생"
+  },
+  "safetyBlock_M329": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "안전 블록 해제 상태 발생 (프레스 정지)"
+  },
+  "clutchAirAlarmHigh_M330": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "클러치 공압 설정값 초과 알람"
+  },
+  "balanceAirAlarmLow_M331": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "바란스 공압 설정값 부족 알람 (바란스 에어 : 상금형무게를 보완하기 위한 공압 장치)"
+  },
+  "None10_M332": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "clutchAirAlarmLow_M333": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "클러치 공압 설정값 부족 알람"
+  },
+  "pressOverload_M334": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 공칭 능력 이상 사용시 프레스 및 금형을 보호하기 위한 유압식 장치동작 신호"
+  },
+  "airLineOilLevel_M335": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "메인에어 공급탱크의 오일이 부족"
+  },
+  "None11_M336": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None12_M337": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "safetyLadder_M338": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 측면에 위치한 사다리의 안전 리미트 장치가 해제된 상태"
+  },
+  "overrun_M339": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "안전 1행정 작업 시 정해진 상사점(15도 또는 30도)에 정지하지 않고 계속해서 슬라이드가 하강하는 것을 검출 하는 것으로 클러치, 브레이크(Clutch & Brake)의 밀림 등 프레스의 이상을 사전에 알려주는 보호 장치입니다."
+  },
+  "lightCurtainFront_M340": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 전면 부에 광전관이 동작을 알리는 신호"
+  },
+  "slideUpperEnd_M341": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "슬라이드 어저스트시 다이하이트의 높이가 최대값에 도달하였습니다."
+  },
+  "slideLowerEnd_M342": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "슬라이드 어저스트시 다이하이트의 높이가 최소값에 도달하였습니다."
+  },
+  "None13_M343": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None14_M344": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "cBPumpStop_M345": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "메인모터 기동중 C/B 펌프 모터가 기동하지 않을 경우 발생하는 알람"
+  },
+  "cBOilCoolerStop_M346": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "메인모터 기동중 C/B 오일 냉각 모터가 기동하지 않을 경우 발생하는 알람"
+  },
+  "cBOilLevel_M347": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "C/B(습식) 탱크 오일 유량의 부족상태를 표시"
+  },
+  "cBLineFilter1_M348": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "C/B(습식) 필터1 (좌) 의 막힘 상태를 표시"
+  },
+  "cBLineFilter2_M349": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "C/B(습식) 필터2 (우) 의 막힘 상태를 표시"
+  },
+  "cBOilPressure_M350": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "C/B(습식) 오일압력의 이상 상태를 표시"
+  },
+  "brakeTempError_M351": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "브레이크 오일 온도 이상 상태 검출"
+  },
+  "None15_M352": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "overloadMonitorAlarm_M353": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "로드모니터 장치로 부터 프레스 공칭능력 이상사용을 경고하는 알람"
+  },
+  "None16_M354": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None17_M355": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None18_M356": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None19_M357": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None20_M358": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "lightCurtainRear_M359": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "프레스 후면 부에 광전관이 동작을 알리는 신호"
+  },
+  "automationAlarm_M360": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "자동화 장치에서 이상알람 신호 발생"
+  },
+  "None21_M361": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None22_M362": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None23_M363": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None24_M364": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "oLPAirExceed_M365": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "OVERLOAD PROTECTOR 장치에 공급하는 공압이 설정값을 초과할 때 발생"
+  },
+  "flywheelBrakeForward_M366": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "플라이 휠 브레이크가 전진 상태입니다. 플라이 휠을 점검하십시오(휠브레이크 : 공기압을 사용하 플라이 휠을 감속)"
+  },
+  "None25_M367": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None26_M368": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None27_M369": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "lubricationCirculationPumpTrip_M370": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활 순환 펌프 모터 과부하로 인한 차단기 트립 발생"
+  },
+  "None28_M371": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None29_M372": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "rd1UnitError_M373": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "PLC 온도 카드 1 이상 발생"
+  },
+  "None30_M374": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None31_M375": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None32_M376": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None33_M377": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None34_M378": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "rd2UnitError_M379": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "PLC 온도 카드 2 이상 발생"
+  },
+  "None35_M380": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None36_M381": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None37_M382": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "dirtyZoneLubOilLevelOver_M383": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 Dirty Zone 오일 초과 발생"
+  },
+  "dirtyZoneLubOilLevelLow_M384": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 Dirty Zone 오일 부족 발생"
+  },
+  "dirtyZoneLubOilLevelEmpty_M385": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 Dirty Zone 오일 없음"
+  },
+  "cleanZoneLubOilLevelLow_M386": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 Clean Zone 오일 부족 발생"
+  },
+  "cleanZoneLubOilLevelEmpty_M387": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 Clean Zone 오일 없음"
+  },
+  "slideOilSupplyError_M388": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "설정된 카운터보다 공급이 부족할 경우 알람 발생 (20Cyl/Min)"
+  },
+  "balanceOilSupplyError_M389": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "설정된 카운터보다 공급이 부족할 경우 알람 발생 (3Cyl/10Sec)"
+  },
+  "crownLOilSupplyError_M390": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "설정된 카운터보다 공급이 부족할 경우 알람 발생 (50Cyl/Min)"
+  },
+  "crownROilSupplyError_M391": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "설정된 카운터보다 공급이 부족할 경우 알람 발생 (50Cyl/Min)"
+  },
+  "None38_M392": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None39_M393": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None40_M394": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "None41_M395": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "cleanLineOilFilter_M396": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 클린 라인 오일 필터 막힘"
+  },
+  "dirtyLineOilFilter_M397": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "윤활탱크 더티 라인 오일 필터 막힘"
+  },
+  "None42_M398": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": ""
+  },
+  "dAUnitError_M399": {
+    "length": 1,
+    "dataType": "Boolean",
+    "scale": "1",
+    "description": "PLC 아날로그 출력카드 이상 발생"
+  },
+  "currentDieNumber_D140": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "현재 사용중인 금형 번호를 표시"
+  },
+  "currentDieName_D1560": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1561": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1562": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1563": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1564": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1565": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1566": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieName_D1567": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "currentDieHeight_D711": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "현재 슬라이드의 높이를 표시"
+  },
+  "currentBalanceAirPressure_D713": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "현재 바란스 공기압 상태를 표시"
+  },
+  "nextDieNumber_D510": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "다음 금형의 번호를 표시 (ADC를 목표하는 금형 번호)"
+  },
+  "nextDieName_D549": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D550": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D551": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D552": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D553": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D554": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D555": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieName_D556": {
+    "length": 128,
+    "dataType": "String",
+    "scale": "1",
+    "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
+  },
+  "nextDieHeight_D511": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "다음 금형의 슬라이드 높이를 표시"
+  },
+  "nextBalanceAirPressure_D513": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "다음 바란스 공기압의 상태를 표시"
+  },
+  "pressAngle_D100": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "슬라이드의 행정시의 움직임을 각도로 표시합니다.  (0~360)"
+  },
+  "cPMCyclePerMinute_D104": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "1행정 기준의 1분간의 타발 수를 표시 (실제 타발 기준 행정수)"
+  },
+  "strokePerMinute_D126": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "모터 기준의 1분간의 타발 수를 표시 (실시간 행정수)"
+  },
+  "crankShaftTempRightFront_D340": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "크랭크샤프트-우/전 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "crankShaftTempLeftFront_D341": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "크랭크샤프트-좌/전 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "crankShaftTempRightRear_D342": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "크랭크샤프트-우/후 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "crankShaftTempLeftRear_D343": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "크랭크샤프트-좌/후 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "conrodTempLeft_D330": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "콘로드 좌 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "conrodTempRight_D331": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "0.1",
+    "description": "콘로드 우 온도(구동부)의 온도 표시 (60도 알람 발생)"
+  },
+  "oilSupplyCountSlide_D20": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "슬라이드 1 분당 오일 공급량을 표시 (순차분배변 블록에서 오일 공급시 센싱) (동작시 1분당 20Count 미달시 알람)"
+  },
+  "oilSupplyCountBalanceCylinder_D21": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "바란스실린더  1 분당 오일 공급량을 표시 (순차분배변 블록에서 오일 공급시 센싱) (동작시 1분당 3Count 미달시 알람)"
+  },
+  "oilSupplyCountCrownLeft_D22": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "크라운 좌측 1 분당 오일 공급량을 표시 (순차분배변 블록에서 오일 공급시 센싱) (동작시 1분당 50Count 미달시 알람)"
+  },
+  "oilSupplyCountCrownRight_D23": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "크라운 우측 1 분당 오일 공급량을 표시 (순차분배변 블록에서 오일 공급시 센싱) (동작시 1분당 50Count 미달시 알람)"
+  },
+  "totalCounter_D1820": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "프레스의 총 타발수"
+  },
+  "totalCounter_D1821": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "프레스의 총 타발수"
+  },
+  "productionCounter_D1810": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "목표 타발수(ex: 주생산량)"
+  },
+  "productionCounter_D1811": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "목표 타발수(ex: 주생산량)"
+  },
+  "currentProduction_D1812": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "현재까지 타발된 수"
+  },
+  "currentProduction_D1813": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "현재까지 타발된 수"
+  },
+  "defficiencyQuantity_D1814": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "생산계획량-현재생산량 (-값으로 표현)"
+  },
+  "defficiencyQuantity_D1815": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "생산계획량-현재생산량 (-값으로 표현)"
+  },
+  "presetCounter_D1816": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "목표 타발수(ex:일생산량)"
+  },
+  "presetCounter_D1817": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "목표 타발수(ex:일생산량)"
+  },
+  "production_D1818": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": ""
+  },
+  "production_D1819": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": ""
+  },
+  "todayStrokeCount_D1912": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 기준 슬라이드 행정 수를 표시 (BCD TYPE)"
+  },
+  "todayStrokeCount_D1913": {
+    "length": 32,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 기준 슬라이드 행정 수를 표시 (BCD TYPE)"
+  },
+  "todayRunningTime_D1914": {
+    "length": 16,
+    "dataType": "Word",
+    "scale": "1",
+    "description": "금일 기준 모터 기동 시간을 표시 (BCD TYPE)"
+  }
+}
