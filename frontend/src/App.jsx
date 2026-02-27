@@ -199,6 +199,12 @@ function App() {
   const [showMetaBit, setShowMetaBit] = useState(true)
   const [showMetaType, setShowMetaType] = useState(true)
   const [showMetaDesc, setShowMetaDesc] = useState(true)
+  const [modbusValues, setModbusValues] = useState({})
+  const [modbusConnected, setModbusConnected] = useState(false)
+  const [modbusError, setModbusError] = useState('')
+  const [modbusHost, setModbusHost] = useState('127.0.0.1')
+  const [modbusPort, setModbusPort] = useState('502')
+  const [modbusSlaveId, setModbusSlaveId] = useState('1')
   const messagesEndRef = useRef(null)
   const eventSourceRef = useRef(null)
   const ioVariableListRef = useRef([])
@@ -299,6 +305,27 @@ function App() {
       ])
     })
 
+    es.addEventListener('modbus_data', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      if (data.parsed && typeof data.parsed === 'object') {
+        setModbusValues((prev) => ({ ...prev, ...data.parsed }))
+      }
+    })
+
+    es.addEventListener('modbus_connected', () => {
+      setModbusConnected(true)
+      setModbusError('')
+    })
+
+    es.addEventListener('modbus_disconnected', () => {
+      setModbusConnected(false)
+    })
+
+    es.addEventListener('modbus_error', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      setModbusError(data.message || 'Modbus 오류')
+    })
+
     eventSourceRef.current = es
     return () => {
       es.close()
@@ -326,6 +353,33 @@ function App() {
   const handleDisconnect = async () => {
     try {
       await fetch(`${API_URL}/api/stop_udp`, { method: 'POST' })
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleModbusConnect = async () => {
+    setModbusError('')
+    try {
+      const res = await fetch(`${API_URL}/api/modbus/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: modbusHost.trim(),
+          port: parseInt(modbusPort, 10) || 502,
+          slave_id: parseInt(modbusSlaveId, 10) || 1,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) setModbusError(data.error || '연결 실패')
+    } catch (err) {
+      setModbusError('서버에 연결할 수 없습니다.')
+    }
+  }
+
+  const handleModbusDisconnect = async () => {
+    try {
+      await fetch(`${API_URL}/api/modbus/disconnect`, { method: 'POST' })
     } catch {
       // ignore
     }
@@ -478,6 +532,14 @@ function App() {
             <span className="side-tab-label">파싱 데이터</span>
             <span className="side-tab-desc">디코딩/파싱 결과</span>
           </button>
+          <button
+            type="button"
+            className={`side-tab ${activeView === 'modbus' ? 'active' : ''}`}
+            onClick={() => setActiveView('modbus')}
+          >
+            <span className="side-tab-label">Modbus</span>
+            <span className="side-tab-desc">Modbus TCP 폴링</span>
+          </button>
         </nav>
 
         <div className="view-content">
@@ -577,6 +639,173 @@ function App() {
           </div>
         </section>
             </>
+          )}
+
+          {activeView === 'modbus' && (
+            <section className="parsed-view modbus-view">
+              <div className="parsed-view-header">
+                <div className="parsed-view-title-row">
+                  <h2>Modbus TCP</h2>
+                </div>
+                <section className="control-panel modbus-control">
+                  <div className="control-row">
+                    <div className="field-group">
+                      <label htmlFor="modbus-host">IP</label>
+                      <input
+                        id="modbus-host"
+                        type="text"
+                        value={modbusHost}
+                        onChange={(e) => setModbusHost(e.target.value)}
+                        placeholder="127.0.0.1"
+                        disabled={modbusConnected}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label htmlFor="modbus-port">포트</label>
+                      <input
+                        id="modbus-port"
+                        type="number"
+                        value={modbusPort}
+                        onChange={(e) => setModbusPort(e.target.value)}
+                        placeholder="502"
+                        min="1"
+                        max="65535"
+                        disabled={modbusConnected}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label htmlFor="modbus-slave">Slave ID</label>
+                      <input
+                        id="modbus-slave"
+                        type="number"
+                        value={modbusSlaveId}
+                        onChange={(e) => setModbusSlaveId(e.target.value)}
+                        placeholder="1"
+                        min="0"
+                        max="255"
+                        disabled={modbusConnected}
+                      />
+                    </div>
+                  </div>
+                  <div className="button-row">
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleModbusConnect}
+                      disabled={modbusConnected}
+                    >
+                      Modbus TCP 연결
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={handleModbusDisconnect}
+                      disabled={!modbusConnected}
+                    >
+                      연결 중지
+                    </button>
+                  </div>
+                  {modbusError && <p className="error-message">{modbusError}</p>}
+                  {modbusConnected && <p className="modbus-status">경고등/알람 1분 간격, 데이터 1초 간격 폴링 중</p>}
+                </section>
+                <p className="parsed-view-hint">io_variables.json과 동일한 목록. Coil 0~106(경고 107개) 1분 간격, Holding Registers 1초 간격.</p>
+                <div className="parsed-meta-toolbar">
+                  <span className="parsed-meta-toolbar-label">표시 열</span>
+                  <div className="parsed-meta-toolbar-checks">
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showBitsCol} onChange={(e) => setShowBitsCol(e.target.checked)} /> 2진수</label>
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showHexCol} onChange={(e) => setShowHexCol(e.target.checked)} /> 16진수</label>
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showValueCol} onChange={(e) => setShowValueCol(e.target.checked)} /> 값</label>
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaBit} onChange={(e) => setShowMetaBit(e.target.checked)} /> 비트</label>
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaType} onChange={(e) => setShowMetaType(e.target.checked)} /> 타입</label>
+                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaDesc} onChange={(e) => setShowMetaDesc(e.target.checked)} /> 설명</label>
+                  </div>
+                </div>
+              </div>
+              <div className="parsed-view-body">
+                {ioVariableList.length === 0 ? (
+                  <p className="parsed-view-empty">io_variables.json을 불러오는 중…</p>
+                ) : (
+                  <div className="parsed-vars-grid">
+                    <div
+                      className="parsed-var-header"
+                      style={{
+                        gridTemplateColumns: [
+                          'minmax(180px, 1.2fr)',
+                          showBitsCol && 'minmax(160px, 2.5fr)',
+                          showHexCol && 'minmax(120px, 2fr)',
+                          showValueCol && '90px',
+                          (showMetaBit || showMetaType || showMetaDesc) && 'minmax(340px, 1.5fr)'
+                        ].filter(Boolean).join(' ')
+                      }}
+                    >
+                      <span className="parsed-var-name">변수명</span>
+                      {showBitsCol && <span className="parsed-var-bits">2진수</span>}
+                      {showHexCol && <span className="parsed-var-hex">16진수</span>}
+                      {showValueCol && <span className="parsed-var-value">값</span>}
+                      {(showMetaBit || showMetaType || showMetaDesc) && (
+                        <div
+                          className="parsed-var-meta-cols"
+                          style={{
+                            gridTemplateColumns: [
+                              showMetaBit && '56px',
+                              showMetaType && '100px',
+                              showMetaDesc && '1fr'
+                            ].filter(Boolean).join(' ')
+                          }}
+                        >
+                          {showMetaBit && <span className="parsed-meta-bit">비트</span>}
+                          {showMetaType && <span className="parsed-meta-type">타입</span>}
+                          {showMetaDesc && <span className="parsed-meta-desc">설명</span>}
+                        </div>
+                      )}
+                    </div>
+                    {ioVariableList.map(([name, info]) => (
+                      <div
+                        key={name}
+                        className="parsed-var-row"
+                        style={{
+                          gridTemplateColumns: [
+                            'minmax(180px, 1.2fr)',
+                            showBitsCol && 'minmax(160px, 2.5fr)',
+                            showHexCol && 'minmax(120px, 2fr)',
+                            showValueCol && '90px',
+                            (showMetaBit || showMetaType || showMetaDesc) && 'minmax(340px, 1.5fr)'
+                          ].filter(Boolean).join(' ')
+                        }}
+                      >
+                        <span className="parsed-var-name" title={name}>{name}</span>
+                        {showBitsCol && (
+                          <span className="parsed-var-bits" title={formatParsedValueAsBits(modbusValues[name], info.length, info.dataType, false)}>
+                            {formatParsedValueAsBits(modbusValues[name], info.length, info.dataType, false)}
+                          </span>
+                        )}
+                        {showHexCol && (
+                          <span className="parsed-var-hex" title={formatParsedValueAsHex(modbusValues[name], info.length, false)}>
+                            {formatParsedValueAsHex(modbusValues[name], info.length, false)}
+                          </span>
+                        )}
+                        {showValueCol && <span className="parsed-var-value">{decodeForDisplay(modbusValues[name], info)}</span>}
+                        {(showMetaBit || showMetaType || showMetaDesc) && (
+                          <div
+                            className="parsed-var-meta-cols"
+                            style={{
+                              gridTemplateColumns: [
+                                showMetaBit && '56px',
+                                showMetaType && '100px',
+                                showMetaDesc && '1fr'
+                              ].filter(Boolean).join(' ')
+                            }}
+                            title={[info.dataType && `DataType: ${info.dataType}`, info.scale && `scale: ${info.scale}`, info.description].filter(Boolean).join('\n')}
+                          >
+                            {showMetaBit && <span className="parsed-meta-bit">{info.length}bit</span>}
+                            {showMetaType && <span className="parsed-meta-type">{info.dataType}{info.scale ? ` scale ${info.scale}` : ''}</span>}
+                            {showMetaDesc && <span className="parsed-meta-desc">{info.description ? (info.description.length > 50 ? info.description.slice(0, 50) + '…' : info.description) : '-'}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           {activeView === 'parsed' && (

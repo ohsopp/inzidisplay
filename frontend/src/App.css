@@ -449,6 +449,10 @@
   background: var(--border);
 }
 
+.modbus-control { margin-bottom: 0.5rem; }
+.modbus-control .field-group { min-width: 8rem; }
+.modbus-status { margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
+
 .error-message {
   margin-top: 1rem;
   color: var(--danger);

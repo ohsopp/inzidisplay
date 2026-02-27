@@ -14,6 +14,11 @@ udp_thread = None
 listening = False
 udp_state = None  # {"ip": str, "port": int} when connected
 
+# Modbus TCP
+modbus_thread = None
+modbus_stop_event = None
+modbus_state = None  # {"host": str, "port": int, "slave_id": int} when connected
+
 
 def broadcast(event: str, data: dict):
     """모든 연결된 SSE 클라이언트에 이벤트 전달"""
@@ -100,6 +105,11 @@ def events():
                 client_queue.put_nowait({"event": "udp_connected", "data": udp_state})
             except queue.Full:
                 pass
+        if modbus_state:
+            try:
+                client_queue.put_nowait({"event": "modbus_connected", "data": modbus_state})
+            except queue.Full:
+                pass
     return Response(
         sse_stream(client_queue),
         mimetype="text/event-stream",
@@ -138,6 +148,62 @@ def stop_udp():
 @app.route("/api/health")
 def health():
     return {"status": "ok"}
+
+
+def _modbus_on_parsed(parsed):
+    broadcast("modbus_data", {"parsed": parsed})
+
+
+def _modbus_on_error(message):
+    broadcast("modbus_error", {"message": message})
+
+
+@app.route("/api/modbus/connect", methods=["POST"])
+def modbus_connect():
+    global modbus_thread, modbus_stop_event, modbus_state
+    data = request.get_json() or {}
+    host = data.get("host", "127.0.0.1").strip()
+    port = int(data.get("port", 502))
+    slave_id = int(data.get("slave_id", 1))
+
+    if modbus_thread and modbus_thread.is_alive():
+        return {"error": "이미 Modbus TCP에 연결 중입니다."}, 400
+
+    try:
+        from modbus_poller import run_poller
+    except ImportError:
+        import os
+        import sys
+        _backend_dir = os.path.dirname(os.path.abspath(__file__))
+        if _backend_dir not in sys.path:
+            sys.path.insert(0, _backend_dir)
+        try:
+            from modbus_poller import run_poller
+        except ImportError:
+            return {"error": "modbus_poller를 불러올 수 없습니다."}, 500
+
+    modbus_stop_event = threading.Event()
+    modbus_thread = threading.Thread(
+        target=run_poller,
+        args=(host, port, slave_id, _modbus_on_parsed, _modbus_on_error, modbus_stop_event),
+        daemon=True,
+    )
+    modbus_thread.start()
+    modbus_state = {"host": host, "port": port, "slave_id": slave_id}
+    broadcast("modbus_connected", modbus_state)
+    return {"ok": True}
+
+
+@app.route("/api/modbus/disconnect", methods=["POST"])
+def modbus_disconnect():
+    global modbus_thread, modbus_stop_event, modbus_state
+    if modbus_stop_event:
+        modbus_stop_event.set()
+    modbus_thread = None
+    modbus_stop_event = None
+    modbus_state = None
+    broadcast("modbus_disconnected", {})
+    return {"ok": True}
 
 
 if __name__ == "__main__":
