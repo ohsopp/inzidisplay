@@ -210,6 +210,9 @@ function App() {
   const [modbusHost, setModbusHost] = useState('127.0.0.1')
   const [modbusPort, setModbusPort] = useState('5051')
   const [modbusSlaveId, setModbusSlaveId] = useState('0')
+  const [sensorData, setSensorData] = useState({}) // { VVB001: { value, ts }, TP3237: { value, ts } }
+  const [mqttConnected, setMqttConnected] = useState(false)
+  const [mqttError, setMqttError] = useState('')
   const messagesEndRef = useRef(null)
   const eventSourceRef = useRef(null)
   const ioVariableListRef = useRef([])
@@ -329,6 +332,40 @@ function App() {
     es.addEventListener('modbus_error', (e) => {
       const data = JSON.parse(e.data || '{}')
       setModbusError(data.message || 'Modbus 오류')
+    })
+
+    es.addEventListener('sensor_data', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      const topic = data.topic
+      if (topic) {
+        setSensorData((prev) => ({ ...prev, [topic]: { value: data.value, ts: data.ts } }))
+        // 센서 데이터가 한 번이라도 들어오면 MQTT 연결된 것으로 간주
+        setMqttConnected(true)
+      }
+    })
+    es.addEventListener('sensor_data_snapshot', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      if (data && typeof data === 'object') {
+        setSensorData((prev) => ({ ...prev, ...data }))
+        if (Object.keys(data).length > 0) {
+          setMqttConnected(true)
+        }
+      }
+    })
+    es.addEventListener('mqtt_connected', () => {
+      setMqttConnected(true)
+      setMqttError('')
+    })
+    es.addEventListener('mqtt_disconnected', () => setMqttConnected(false))
+    es.addEventListener('mqtt_error', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      setMqttError(data.message || 'MQTT 오류')
+      setMqttConnected(false)
+    })
+    es.addEventListener('mqtt_status_snapshot', (e) => {
+      const data = JSON.parse(e.data || '{}')
+      setMqttConnected(!!data.connected)
+      setMqttError(data.error || '')
     })
 
     eventSourceRef.current = es
@@ -544,6 +581,14 @@ function App() {
           >
             <span className="side-tab-label">Modbus</span>
             <span className="side-tab-desc">Modbus TCP 폴링</span>
+          </button>
+          <button
+            type="button"
+            className={`side-tab ${activeView === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveView('dashboard')}
+          >
+            <span className="side-tab-label">센서 대시보드</span>
+            <span className="side-tab-desc">MQTT 진동/온도 실시간</span>
           </button>
         </nav>
 
@@ -821,6 +866,70 @@ function App() {
                     ))}
                   </div>
                 )}
+              </div>
+            </section>
+          )}
+
+          {activeView === 'dashboard' && (
+            <section className="parsed-view dashboard-view">
+              <div className="parsed-view-header">
+                <div className="parsed-view-title-row">
+                  <h2>센서 대시보드 (MQTT)</h2>
+                  <span className={`mqtt-status ${mqttConnected ? 'connected' : 'disconnected'}`}>
+                    {mqttConnected ? 'MQTT 연결됨' : 'MQTT 미연결'}
+                  </span>
+                </div>
+                {mqttError && <p className="error-message">{mqttError}</p>}
+                <p className="parsed-view-hint">192.168.1.101:1883 — VVB001(진동), TP3237(온도) 실시간 수신</p>
+              </div>
+              <div className="dashboard-cards">
+                <div className="sensor-card">
+                  <div className="sensor-card-title">VVB001 · 진동</div>
+                  <div className="sensor-card-value sensor-card-value-multi">
+                    {(() => {
+                      const v = sensorData.VVB001?.value
+                      if (!v || typeof v !== 'object') return '—'
+                      const num = (x) => (x == null ? '—' : Number.isFinite(Number(x)) ? Number(x) : String(x))
+                      return (
+                        <>
+                          <div>v-rms: {num(v.v_rms)}</div>
+                          <div>a-peak: {num(v.a_peak)}</div>
+                          <div>a-rms: {num(v.a_rms)}</div>
+                          <div>온도: {num(v.temperature)}</div>
+                          <div>crest: {num(v.crest)}</div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                  {sensorData.VVB001?.ts && (
+                    <div className="sensor-card-ts">
+                      {new Date(sensorData.VVB001.ts * 1000).toLocaleTimeString('ko-KR')}
+                    </div>
+                  )}
+                </div>
+                <div className="sensor-card">
+                  <div className="sensor-card-title">TP3237 · 온도</div>
+                  <div className="sensor-card-value">
+                    {(() => {
+                      const v = sensorData.TP3237?.value
+                      if (v == null) return '—'
+                      if (typeof v === 'object') {
+                        const inner = v && typeof v.payload === 'object' ? v.payload : v
+                        const cand = inner.data ?? inner.value ?? inner.temperature ?? inner.vibration
+                        if (cand != null && typeof cand !== 'object') return cand
+                        return JSON.stringify(v)
+                      }
+                      const n = Number(v)
+                      return Number.isFinite(n) ? n : String(v)
+                    })()}
+                  </div>
+                  <div className="sensor-card-unit">°C</div>
+                  {sensorData.TP3237?.ts && (
+                    <div className="sensor-card-ts">
+                      {new Date(sensorData.TP3237.ts * 1000).toLocaleTimeString('ko-KR')}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           )}

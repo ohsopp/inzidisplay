@@ -480,6 +480,19 @@
 .modbus-control .field-group { min-width: 8rem; }
 .modbus-status { margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
 
+/* 센서 대시보드 */
+.dashboard-view .parsed-view-title-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.mqtt-status { font-size: 0.85rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 500; }
+.mqtt-status.connected { background: rgba(81, 207, 102, 0.2); color: var(--success); }
+.mqtt-status.disconnected { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
+.dashboard-cards { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 1.5rem; }
+.sensor-card { min-width: 220px; flex: 1; max-width: 320px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+.sensor-card-title { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.sensor-card-value { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
+.sensor-card-value-multi { font-size: 0.9rem; font-weight: 500; color: var(--text-primary); display: flex; flex-direction: column; gap: 0.15rem; }
+.sensor-card-unit { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.sensor-card-ts { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; }
+
 .error-message {
   margin-top: 1rem;
   color: var(--danger);

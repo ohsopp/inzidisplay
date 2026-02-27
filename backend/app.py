@@ -23,9 +23,27 @@ modbus_thread = None
 modbus_stop_event = None
 modbus_state = None  # {"host": str, "port": int, "slave_id": int} when connected
 
+# MQTT 센서 (VVB001 진동, TP3237 온도) - 마지막 수신값 (새 SSE 클라이언트용)
+last_sensor_data = {}  # {"VVB001": {"value": ..., "ts": ...}, "TP3237": {...}}
+# MQTT 연결 상태 (에러는 앱 기동 직후 발생 시 SSE 클라이언트 없어서 안 보임 → 스냅샷으로 전달)
+mqtt_status = {"connected": False, "error": ""}  # 새로 접속 시 화면에 표시용
+
 
 def broadcast(event: str, data: dict):
     """모든 연결된 SSE 클라이언트에 이벤트 전달"""
+    global last_sensor_data, mqtt_status
+    if event == "sensor_data":
+        topic = data.get("topic")
+        if topic:
+            last_sensor_data[topic] = {"value": data.get("value"), "ts": data.get("ts")}
+    elif event == "mqtt_connected":
+        mqtt_status["connected"] = True
+        mqtt_status["error"] = ""
+    elif event == "mqtt_disconnected":
+        mqtt_status["connected"] = False
+    elif event == "mqtt_error":
+        mqtt_status["connected"] = False
+        mqtt_status["error"] = data.get("message", "MQTT 오류")
     msg = {"event": event, "data": data}
     with client_queues_lock:
         for q in list(client_queues):
@@ -114,6 +132,16 @@ def events():
                 client_queue.put_nowait({"event": "modbus_connected", "data": modbus_state})
             except queue.Full:
                 pass
+        if last_sensor_data:
+            try:
+                client_queue.put_nowait({"event": "sensor_data_snapshot", "data": last_sensor_data})
+            except queue.Full:
+                pass
+        # MQTT 연결 상태/에러도 전달 (앱 기동 직후 실패해도 화면에 메시지 보이도록)
+        try:
+            client_queue.put_nowait({"event": "mqtt_status_snapshot", "data": mqtt_status})
+        except queue.Full:
+            pass
     return Response(
         sse_stream(client_queue),
         mimetype="text/event-stream",
@@ -220,6 +248,13 @@ def modbus_disconnect():
     broadcast("modbus_disconnected", {})
     return {"ok": True}
 
+
+# MQTT 구독 시작 (앱 로드 시 한 번만)
+try:
+    from mqtt_subscriber import start as mqtt_start
+    mqtt_start(broadcast)
+except Exception:
+    pass
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=6005, debug=True, use_reloader=False, threaded=True)
