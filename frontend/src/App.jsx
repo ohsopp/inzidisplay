@@ -891,7 +891,11 @@ function App() {
                       if (!v || typeof v !== 'object') {
                         return <div className="sensor-panel-empty">데이터 대기 중</div>
                       }
-                      const num = (x) => (x == null ? '—' : (Number.isFinite(Number(x)) ? Number(x) : String(x)))
+                      const num = (x) => {
+                        if (x == null) return '—'
+                        const n = Number(x)
+                        return Number.isFinite(n) ? n.toFixed(2) : String(x)
+                      }
                       const rows = [
                         { label: 'v-rms', value: num(v.v_rms), unit: '' },
                         { label: 'a-peak', value: num(v.a_peak), unit: '' },
@@ -930,9 +934,15 @@ function App() {
                       if (typeof v === 'object') {
                         const inner = v && typeof v.payload === 'object' ? v.payload : v
                         const cand = inner.data ?? inner.value ?? inner.temperature ?? inner.vibration
-                        disp = (cand != null && typeof cand !== 'object') ? cand : '—'
+                        if (cand != null && typeof cand !== 'object') {
+                          const n = Number(cand)
+                          disp = Number.isFinite(n) ? n.toFixed(2) : String(cand)
+                        } else {
+                          disp = '—'
+                        }
                       } else if (Number.isFinite(Number(v))) {
-                        disp = Number(v)
+                        const n = Number(v)
+                        disp = n.toFixed(2)
                       }
                       return (
                         <>
