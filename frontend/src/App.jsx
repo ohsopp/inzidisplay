@@ -154,8 +154,17 @@ function decodeForDisplay(raw, info) {
     const num = typeof raw === 'number' ? raw : parseInt(raw, 10)
     if (Number.isNaN(num)) return '-'
     const u = toUnsigned(num, len)
-    if (scaleNum === 0.1) return (u * 0.1).toFixed(1)
-    return u
+    // unsigned로 표시하되, signed로 음수면 절댓값으로 보여줌 (예: 4294965796 → 1500)
+    let display = u
+    if (len === 16) {
+      const s = (u & 0xFFFF) << 16 >> 16
+      if (s < 0) display = -s
+    } else if (len === 32) {
+      const s = (u >>> 0) | 0
+      if (s < 0) display = -s
+    }
+    if (scaleNum === 0.1) return (display * 0.1).toFixed(1)
+    return display
   }
 
   if (dt === 'string') {
