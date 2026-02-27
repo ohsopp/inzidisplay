@@ -115,13 +115,11 @@ function readBitsAsNumber(offset, len, getBit, littleEndian) {
   return val >>> 0
 }
 
-/** 드롭다운 값 '1'|'2'|'3'|'4' → { orderReversed, littleEndian } */
+/** 드롭다운 값 '1'=빅엔디안, '2'=리틀엔디안 → { orderReversed, littleEndian } */
 function getParseOptionsFromMode(mode) {
   switch (mode) {
-    case '1': return { orderReversed: false, littleEndian: true }   // 목록 정순, 리틀
-    case '2': return { orderReversed: false, littleEndian: false } // 목록 정순, 빅
-    case '3': return { orderReversed: true, littleEndian: true }    // 목록 역순, 리틀
-    case '4': return { orderReversed: true, littleEndian: false }  // 목록 역순, 빅
+    case '1': return { orderReversed: false, littleEndian: false } // 빅엔디안
+    case '2': return { orderReversed: false, littleEndian: true }    // 리틀엔디안
     default: return { orderReversed: false, littleEndian: false }
   }
 }
@@ -199,7 +197,7 @@ function App() {
   const [activeView, setActiveView] = useState('raw') // 'raw' | 'parsed'
   const [ioVariableList, setIoVariableList] = useState([]) // [ [name, lengthBit], ... ]
   const [parsedValues, setParsedValues] = useState({}) // { varName: displayValue }
-  const [parsedEndianMode, setParsedEndianMode] = useState('1') // '1'|'2'|'3'|'4'
+  const [parsedEndianMode, setParsedEndianMode] = useState('1') // '1'=빅엔디안, '2'=리틀엔디안
   const [showBitsCol, setShowBitsCol] = useState(true)
   const [showHexCol, setShowHexCol] = useState(true)
   const [showValueCol, setShowValueCol] = useState(true)
@@ -828,10 +826,8 @@ function App() {
                       onChange={(e) => setParsedEndianMode(e.target.value)}
                       aria-label="순서·엔디안 파싱 모드"
                     >
-                      <option value="1">1. 목록 정순, 비트 리틀엔디안</option>
-                      <option value="2">2. 목록 정순, 비트 빅엔디안</option>
-                      <option value="3">3. 목록 역순, 비트 리틀엔디안</option>
-                      <option value="4">4. 목록 역순, 비트 빅엔디안</option>
+                      <option value="1">빅엔디안</option>
+                      <option value="2">리틀엔디안</option>
                     </select>
                   </label>
                 </div>
