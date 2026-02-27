@@ -642,49 +642,49 @@
     "description": "현재 사용중인 금형 번호를 표시"
   },
   "currentDieName_D1560": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1561": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1562": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1563": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1564": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1565": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1566": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "currentDieName_D1567": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "현재 사용 중인 금형의 이름을 표시 (Part Name)"
@@ -708,49 +708,49 @@
     "description": "다음 금형의 번호를 표시 (ADC를 목표하는 금형 번호)"
   },
   "nextDieName_D549": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D550": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D551": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D552": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D553": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D554": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D555": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"
   },
   "nextDieName_D556": {
-    "length": 128,
+    "length": 16,
     "dataType": "String",
     "scale": "1",
     "description": "다음 사용 중인 금형의 이름을 표시 (Part Name)"

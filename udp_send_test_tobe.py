@@ -3,7 +3,8 @@
 TOBE(True Order Big-Endian) UDP 테스트 송신기.
 
 io_variables.json의 변수별 길이(bit) 합만큼 UDP 패킷을 1초 간격으로 전송한다.
-정순 빅엔디안용: Boolean 0/1, Word/Dword는 칼럼 설명에 맞춘 유의미한 더미값, String은 hello 고정.
+정순 빅엔디안용: Boolean 0/1, Word/Dword는 칼럼 설명에 맞춘 유의미한 더미값.
+String: 금형 이름 등은 하나의 문자열을 D1560, D1561, … 에 2바이트씩 분할 (예: hello → D1560=he, D1561=ll, D1562=o\\0).
 수신 측: PLC UDP Monitor (포트 5212)
 """
 import json
@@ -78,10 +79,21 @@ def load_variables():
     return out
 
 
+def build_string_groups(variables):
+    """연속된 String 변수를 같은 'base'로 묶음. base = 이름에서 _D1234 제거. 반환: { base: [(name, length_bits), ...] }"""
+    groups = {}
+    for name, length_bits, data_type, *_ in variables:
+        if data_type != "string":
+            continue
+        base = name.rsplit("_", 1)[0] if "_" in name else name
+        groups.setdefault(base, []).append((name, length_bits))
+    return groups
+
+
 def get_meaningful_value(name, length_bits, data_type, scale, description):
-    """Boolean: 0/1, Word/Dword: 칼럼에 맞는 값, String: None(hello로 별도 처리)."""
+    """Boolean: 0/1, Word/Dword: 칼럼에 맞는 값, String: None(별도 처리)."""
     if data_type == "string":
-        return None  # payload에서 "hello{N}" 로 채움
+        return None
     if data_type == "boolean":
         if "운전준비" in description or "준비" in description or "Green" in name:
             return 1
@@ -95,13 +107,11 @@ def get_meaningful_value(name, length_bits, data_type, scale, description):
     return 0
 
 
-def value_to_bytes(value, length_bits, data_type, big_endian=True, string_index=0):
-    """값을 바이트로 (Boolean 1비트, Word 16bit, Dword 32bit). String이면 hello{N} ASCII."""
-    if data_type == "string":
+def value_to_bytes(value, length_bits, data_type, big_endian=True, string_chunk=None):
+    """값을 바이트로. string_chunk: String일 때 이 구간에 넣을 바이트 (2바이트 등)."""
+    if data_type == "string" and string_chunk is not None:
         byte_count = (length_bits + 7) // 8
-        text = f"hello{string_index}" if string_index else "hello"
-        ascii_bytes = text.encode("ascii").ljust(byte_count, b"\x00")
-        return ascii_bytes
+        return string_chunk.ljust(byte_count, b"\x00")[:byte_count]
     if value is None:
         byte_count = (length_bits + 7) // 8
         return bytes(byte_count)
@@ -155,13 +165,25 @@ def main():
     wire_bits = total_bytes * 8
     padding_bits = wire_bits - total_var_bits
 
+    # String 그룹별 하나의 문자열을 변수 구간마다 잘라 씀 (예: hello → D1560=he, D1561=ll, D1562=o\0)
+    string_groups = build_string_groups(variables)
+    group_full_strings = {}
+    for base, items in string_groups.items():
+        total_bytes = sum(length_bits // 8 for _, length_bits in items)
+        group_full_strings[base] = "hello".encode("ascii").ljust(total_bytes, b"\x00")[:total_bytes]
+    base_offset = {}
+
     bits = [0] * padding_bits
-    string_index = 0
     for name, length_bits, data_type, scale, description in variables:
         value = get_meaningful_value(name, length_bits, data_type, scale, description)
         if data_type == "string":
-            string_index += 1
-            raw = value_to_bytes(None, length_bits, data_type, big_endian=True, string_index=string_index)
+            base = name.rsplit("_", 1)[0] if "_" in name else name
+            off = base_offset.get(base, 0)
+            chunk_len = length_bits // 8
+            full = group_full_strings.get(base, b"")
+            chunk = full[off : off + chunk_len] if off < len(full) else bytes(chunk_len)
+            base_offset[base] = off + chunk_len
+            raw = value_to_bytes(None, length_bits, data_type, big_endian=True, string_chunk=chunk)
         else:
             raw = value_to_bytes(value, length_bits, data_type, big_endian=True)
         if data_type == "boolean" and length_bits == 1:

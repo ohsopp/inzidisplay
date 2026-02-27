@@ -168,11 +168,18 @@ function decodeForDisplay(raw, info) {
   }
 
   if (dt === 'string') {
-    if (typeof raw !== 'string' || !/^[0-9a-fA-F]*$/.test(raw)) return '-'
-    const bytes = hexToBytes(raw)
+    let hexStr = ''
+    if (typeof raw === 'number' && len === 16) {
+      hexStr = (raw >>> 0).toString(16).padStart(4, '0')
+    } else if (typeof raw === 'string' && /^[0-9a-fA-F]*$/.test(raw)) {
+      hexStr = raw
+    } else {
+      return '-'
+    }
+    const bytes = hexToBytes(hexStr)
     if (!bytes.length) return '-'
     const s = String.fromCharCode(...bytes)
-    return s.replace(/\0+$/, '').trim()
+    return s.replace(/\0+$/, '').trim() || '-'
   }
 
   if (typeof raw === 'number') {
