@@ -5,7 +5,10 @@ Modbus TCP 슬레이브(서버). iolist.csv 주소 순서대로 Coils(경고/알
 """
 import csv
 import os
+import random
 import sys
+import threading
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -123,6 +126,71 @@ def build_register_values(reg_rows):
     return values
 
 
+# 시뮬레이션: 경고등 랜덤 점등, 카운터/생산량/타발/가동은 전부 +1 쌓였다가 상한 넘으면 복귀
+COIL_FLASH_INTERVAL = 2.5
+COIL_FLASH_DURATION = 1.0
+REG_PULSE_INTERVAL = 0.5
+REG_PULSE_CAP = 150
+
+# iolist 기준 바뀌어야 하는 항목 전부 (시작 인덱스, 레지스터 개수). 정적(금형번호/이름/온도 등) 제외
+# 토탈카운터 D1820,D1821 / 생산계획 D1810,D1811 / 현재생산량 D1812,D1813 / 과부족 D1814,D1815 /
+# 설정카운터 D1816,D1817 / 카운트수량 D1818,D1819 / 금일 가동수량 D1912,D1913 / 금일 가동시간 D1914
+REG_PULSE_SPECS = [
+    (35, 2), (37, 2),   # 토탈카운터
+    (39, 2), (41, 2),   # 생산계획량
+    (43, 2), (45, 2),   # 현재생산량
+    (47, 2), (49, 2),   # 과부족수량
+    (51, 2), (53, 2),   # 설정카운터
+    (55, 2), (57, 2),   # 카운트수량
+    (59, 2), (61, 2),   # 금일 가동수량
+    (63, 1),            # 금일 가동시간
+]
+
+
+def _simulation_loop(co_block, hr_block, coil_base, reg_base_snapshot, stop_event):
+    """코일: 랜덤 점등 후 복귀. 레지스터: 바뀌어야 하는 항목 전부 매 틱 +1, 상한 넘으면 복귀."""
+    coil_vals = co_block.values
+    reg_vals = hr_block.values
+    last_coil_flash = 0.0
+    last_reg_pulse = 0.0
+    flashed_coil_idx = None
+    flashed_coil_restore_at = 0.0
+    n_coils = len(coil_vals)
+    while not stop_event.is_set():
+        now = time.monotonic()
+        if flashed_coil_idx is not None and now >= flashed_coil_restore_at:
+            coil_vals[flashed_coil_idx] = coil_base[flashed_coil_idx]
+            flashed_coil_idx = None
+        if flashed_coil_idx is None and n_coils and (now - last_coil_flash) >= COIL_FLASH_INTERVAL:
+            last_coil_flash = now
+            idx = random.randint(0, n_coils - 1)
+            coil_vals[idx] = 1
+            flashed_coil_idx = idx
+            flashed_coil_restore_at = now + COIL_FLASH_DURATION
+        # 바뀌어야 하는 레지스터 전부 매 틱 +1
+        if (now - last_reg_pulse) >= REG_PULSE_INTERVAL:
+            last_reg_pulse = now
+            for start, count in REG_PULSE_SPECS:
+                if start + count > len(reg_vals):
+                    continue
+                base_hi = reg_base_snapshot[start]
+                base_lo = reg_base_snapshot[start + 1] if count == 2 else 0
+                if count == 2:
+                    v = (reg_vals[start] << 16) | (reg_vals[start + 1] & 0xFFFF)
+                    base_v = (base_hi << 16) | (base_lo & 0xFFFF)
+                    v = (v + 1) & 0xFFFFFFFF
+                    if v >= base_v + REG_PULSE_CAP:
+                        v = base_v
+                    reg_vals[start] = (v >> 16) & 0xFFFF
+                    reg_vals[start + 1] = v & 0xFFFF
+                else:
+                    v = (reg_vals[start] + 1) & 0xFFFF
+                    if v >= (base_hi + REG_PULSE_CAP) & 0xFFFF:
+                        v = base_hi
+                    reg_vals[start] = v
+        time.sleep(0.1)
+
+
 def main():
     coil_rows, reg_rows = parse_iolist()
     coil_vals = build_coil_values(coil_rows)
@@ -157,6 +225,17 @@ def main():
     hr = ModbusSequentialDataBlock(1, reg_vals)
     ir = ModbusSequentialDataBlock(1, [0] * max(1, len(reg_vals)))
 
+    # 시뮬레이션: 블록의 .values를 직접 수정 (블록이 list 복사본을 갖기 때문)
+    coil_base = list(co.values)
+    reg_base_snapshot = list(hr.values)
+    sim_stop = threading.Event()
+    sim_thread = threading.Thread(
+        target=_simulation_loop,
+        args=(co, hr, coil_base, reg_base_snapshot, sim_stop),
+        daemon=True,
+    )
+    sim_thread.start()
+
     store = ModbusDeviceContext(di=di, co=co, hr=hr, ir=ir)
     context = ModbusServerContext(devices=store, single=True) if _use_devices else ModbusServerContext(slaves=store, single=True)
 
@@ -166,6 +245,7 @@ def main():
 
     print(f"Coils: 0~{len(coil_vals)-1} ({len(coil_vals)}개)")
     print(f"Holding Registers: 0~{len(reg_vals)-1} ({len(reg_vals)}개)")
+    print("시뮬레이션: 경고등 랜덤 점등, 타발/카운터 +1 후 복귀")
     print(f"Modbus TCP 슬레이브 {HOST}:{PORT} 에서 대기 중... (Ctrl+C 종료)")
     try:
         StartTcpServer(context=context, identity=identity, address=(HOST, PORT))
