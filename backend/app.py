@@ -1,9 +1,16 @@
 import json
+import os
 import queue
 import socket
+import sys
 import threading
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_from_directory
+
 from flask_cors import CORS
+
+# 단일 실행(또는 .exe) 시 프론트 빌드물 서빙 경로 (PyInstaller: _MEIPASS)
+_BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+_FRONTEND_DIST = os.path.join(_BASE_DIR, "frontend_dist")
 
 app = Flask(__name__)
 # CORS: preflight(OPTIONS) 통과하도록 명시 (프론트 localhost:6173 → 백엔드 6005)
@@ -255,6 +262,33 @@ try:
     mqtt_start(broadcast)
 except Exception:
     pass
+
+
+def _serve_frontend(path=""):
+    """프론트 빌드물(frontend_dist)이 있으면 정적 파일/SPA 서빙."""
+    path = path.strip("/") or "index.html"
+    file_path = os.path.join(_FRONTEND_DIST, path)
+    if os.path.isfile(file_path):
+        return send_from_directory(_FRONTEND_DIST, path)
+    if not path.startswith("api/"):
+        index_path = os.path.join(_FRONTEND_DIST, "index.html")
+        if os.path.isfile(index_path):
+            return send_from_directory(_FRONTEND_DIST, "index.html")
+    return None
+
+
+# frontend_dist 있을 때만 루트/SPA 라우트 등록 (단일 실행·exe용)
+if os.path.isdir(_FRONTEND_DIST):
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_static_or_spa(path):
+        if path.startswith("api/"):
+            return {"error": "Not Found"}, 404
+        r = _serve_frontend(path)
+        if r is not None:
+            return r
+        return {"error": "Not Found"}, 404
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=6005, debug=True, use_reloader=False, threaded=True)
