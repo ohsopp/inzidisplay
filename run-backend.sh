@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
 BACKEND_DIR="$REPO_ROOT/backend"
-# 프로젝트 루트 venv(pymodbus 설치됨) 우선, 없으면 backend/venv
+# 프로젝트 루트 venv 우선, 없으면 backend/venv
 ROOT_VENV_PYTHON="$REPO_ROOT/venv/bin/python3"
 BACKEND_VENV_PYTHON="$BACKEND_DIR/venv/bin/python"
 
@@ -19,8 +19,8 @@ if command -v lsof &>/dev/null; then
   fi
 fi
 
-# 루트 venv에 pymodbus 있으면 사용(Modbus 폴링용), 없으면 backend/venv 또는 시스템 python3
-if [ -x "$ROOT_VENV_PYTHON" ] && "$ROOT_VENV_PYTHON" -c "import pymodbus" 2>/dev/null; then
+# 루트 venv가 있으면 사용, 없으면 backend/venv 또는 시스템 python3
+if [ -x "$ROOT_VENV_PYTHON" ]; then
   exec "$ROOT_VENV_PYTHON" "$BACKEND_DIR/app.py"
 elif [ -x "$BACKEND_VENV_PYTHON" ] && "$BACKEND_VENV_PYTHON" -c "import sys" 2>/dev/null; then
   exec "$BACKEND_VENV_PYTHON" "$BACKEND_DIR/app.py"

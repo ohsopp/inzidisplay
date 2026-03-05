@@ -219,31 +219,6 @@ def mc_disconnect():
     return {"ok": True}
 
 
-@app.route("/api/mc/poll-intervals", methods=["GET", "POST", "OPTIONS"])
-def mc_poll_intervals():
-    if request.method == "OPTIONS":
-        return "", 204
-    try:
-        from mc_poller import get_poll_intervals, set_poll_intervals
-    except ImportError:
-        _backend_dir = os.path.dirname(os.path.abspath(__file__))
-        if _backend_dir not in sys.path:
-            sys.path.insert(0, _backend_dir)
-        try:
-            from mc_poller import get_poll_intervals, set_poll_intervals
-        except ImportError:
-            return {"error": "mc_poller를 불러올 수 없습니다."}, 500
-    if request.method == "GET":
-        return get_poll_intervals()
-    data = request.get_json(silent=True) or {}
-    set_poll_intervals(
-        boolean_ms=data.get("boolean_ms"),
-        data_ms=data.get("data_ms"),
-        string_ms=data.get("string_ms"),
-    )
-    return get_poll_intervals()
-
-
 # MQTT 구독 시작 (앱 로드 시 한 번만)
 try:
     from mqtt_subscriber import start as mqtt_start

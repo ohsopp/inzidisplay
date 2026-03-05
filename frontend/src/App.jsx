@@ -186,36 +186,6 @@ function App() {
   const [mcError, setMcError] = useState('')
   const [mcHost, setMcHost] = useState('127.0.0.1')
   const [mcPort, setMcPort] = useState('5002')
-  const [mcPollIntervals, setMcPollIntervals] = useState({ boolean_ms: 1000, data_ms: 1000, string_ms: 1000 })
-  const [mcPollSettingsOpen, setMcPollSettingsOpen] = useState(false)
-  const [mcPollEdit, setMcPollEdit] = useState({ boolean_ms: 1000, data_ms: 1000, string_ms: 1000 })
-  const [mcPollDisplay, setMcPollDisplay] = useState({ boolean: '', data: '', string: '' })
-  const [mcPollUnits, setMcPollUnits] = useState({ boolean: 'ms', data: 'ms', string: 'ms' })
-  const [mcPollError, setMcPollError] = useState('')
-
-  const POLL_MIN_MS = 200
-  const POLL_MAX_MS = 1800000 // 30min
-  const toDisplay = (ms, unit) => {
-    if (unit === 'min') return ms / 60000
-    if (unit === 's') return ms / 1000
-    return ms
-  }
-  /** 입력 문자열을 ms로 파싱. 빈 값·잘못된 값이면 null */
-  const parseDisplayToMs = (val, unit) => {
-    const s = String(val).trim()
-    if (s === '') return null
-    let n
-    if (unit === 'min') n = Math.round(parseFloat(s) * 60000)
-    else if (unit === 's') n = Math.round(parseFloat(s) * 1000)
-    else n = parseInt(s, 10)
-    return Number.isNaN(n) ? null : n
-  }
-  /** 저장된 ms를 팝업에서 보기 좋게 표시할 단위로 변환 (1000ms→s, 60s→1min) */
-  const msToBestUnit = (ms) => {
-    if (ms >= 60000 && ms % 60000 === 0) return 'min'
-    if (ms >= 1000 && ms % 1000 === 0) return 's'
-    return 'ms'
-  }
   const [sensorData, setSensorData] = useState({}) // { VVB001: { value, ts }, TP3237: { value, ts } }
   const [mqttConnected, setMqttConnected] = useState(false)
   const [mqttError, setMqttError] = useState('')
@@ -253,7 +223,7 @@ function App() {
     return decodeForDisplay(raw, info)
   }
 
-  /** Dword 쌍 합쳐서 한 행으로 보여줄 목록 (Modbus/UDP 테이블용) */
+  /** Dword 쌍 합쳐서 한 행으로 보여줄 목록 (MC 뷰 표시용) */
   const displayVariableList = useMemo(
     () => buildDisplayVariableList(ioVariableList),
     [ioVariableList]
@@ -378,83 +348,6 @@ function App() {
     }
   }
 
-  const fetchMcPollIntervals = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/mc/poll-intervals`)
-      if (res.ok) {
-        const data = await res.json()
-        setMcPollIntervals({
-          boolean_ms: Number(data.boolean_ms) || 1000,
-          data_ms: Number(data.data_ms) || 1000,
-          string_ms: Number(data.string_ms) || 1000,
-        })
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  useEffect(() => {
-    if (activeView === 'mc') fetchMcPollIntervals()
-  }, [activeView])
-
-  useEffect(() => {
-    if (mcPollSettingsOpen) {
-      const units = {
-        boolean: msToBestUnit(mcPollIntervals.boolean_ms),
-        data: msToBestUnit(mcPollIntervals.data_ms),
-        string: msToBestUnit(mcPollIntervals.string_ms),
-      }
-      setMcPollEdit({ ...mcPollIntervals })
-      setMcPollUnits(units)
-      setMcPollDisplay({
-        boolean: String(toDisplay(mcPollIntervals.boolean_ms, units.boolean)),
-        data: String(toDisplay(mcPollIntervals.data_ms, units.data)),
-        string: String(toDisplay(mcPollIntervals.string_ms, units.string)),
-      })
-      setMcPollError('')
-    }
-  }, [mcPollSettingsOpen])
-
-  const handleMcPollIntervalsSave = async () => {
-    const boolean_ms = parseDisplayToMs(mcPollDisplay.boolean, mcPollUnits.boolean)
-    const data_ms = parseDisplayToMs(mcPollDisplay.data, mcPollUnits.data)
-    const string_ms = parseDisplayToMs(mcPollDisplay.string, mcPollUnits.string)
-
-    if (boolean_ms === null || data_ms === null || string_ms === null) {
-      setMcPollError('모든 항목에 값을 입력해 주세요.')
-      return
-    }
-    if (boolean_ms < POLL_MIN_MS || data_ms < POLL_MIN_MS || string_ms < POLL_MIN_MS ||
-        boolean_ms > POLL_MAX_MS || data_ms > POLL_MAX_MS || string_ms > POLL_MAX_MS) {
-      setMcPollError('최소 200ms(0.2s) 이상, 최대 30분 이하로 입력해 주세요. 현재 값이 범위를 벗어나 저장되지 않습니다.')
-      return
-    }
-
-    const payload = { boolean_ms, data_ms, string_ms }
-    try {
-      const res = await fetch(`${API_URL}/api/mc/poll-intervals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data && (typeof data.boolean_ms === 'number' || typeof data.boolean_ms === 'string')) {
-        setMcPollIntervals({
-          boolean_ms: Number(data.boolean_ms) || 1000,
-          data_ms: Number(data.data_ms) || 1000,
-          string_ms: Number(data.string_ms) || 1000,
-        })
-        setMcPollSettingsOpen(false)
-        setMcPollError('')
-      } else {
-        setMcPollError(data?.error || '저장 실패. 백엔드를 재시작한 뒤 다시 시도하세요.')
-      }
-    } catch (err) {
-      setMcPollError('서버에 연결할 수 없습니다. 백엔드(6005)가 켜져 있는지 확인하세요.')
-    }
-  }
-
   /** 바이트 하나를 8비트 문자열로 (MSB 먼저) */
   const byteToBits8 = (b) => ((b & 0xff).toString(2)).padStart(8, '0')
 
@@ -543,7 +436,7 @@ function App() {
       <header className="header">
         <div className="logo">
           <span className="logo-icon">◉</span>
-          <h1>PLC(UDP), MC Protocol(3E), MQTT(IOLink)</h1>
+          <h1>MC Protocol(3E) & MQTT(IOLink)</h1>
         </div>
         <div className={`status-badge ${serverConnected ? 'online' : 'offline'}`}>
           {serverConnected ? '서버 연결됨' : '서버 연결 끊김'}
@@ -576,20 +469,6 @@ function App() {
               <div className="parsed-view-header">
                 <div className="parsed-view-title-row">
                   <h2>MC Protocol (3E)</h2>
-                  <div className="parsed-view-title-row-right">
-                    <button
-                      type="button"
-                      className="mc-poll-settings-btn"
-                      onClick={() => setMcPollSettingsOpen(true)}
-                      title="폴링 간격 설정"
-                      aria-label="폴링 간격 설정"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                      </svg>
-                    </button>
-                  </div>
                 </div>
                 <section className="control-panel mc-control">
                   <div className="control-row">
@@ -636,115 +515,6 @@ function App() {
                   </div>
                   {mcError && <p className="error-message">{mcError}</p>}
                 </section>
-                {mcPollSettingsOpen && (
-                  <div className="mc-poll-modal-overlay" onClick={() => setMcPollSettingsOpen(false)}>
-                    <div className="mc-poll-modal" onClick={(e) => e.stopPropagation()}>
-                      <h3>폴링 간격 설정</h3>
-                      <p className="mc-poll-modal-desc">각 구간별 폴링 주기. 최소 200ms, 최대 30분. 단위는 ms/s/min 선택. 1000ms→1s, 60s→1min으로 자동 변환되어 표시됩니다.</p>
-                      {mcPollError && <p className="mc-poll-modal-error">{mcPollError}</p>}
-                      <div className="mc-poll-modal-fields">
-                        <div className="field-group">
-                          <label>경고등/알람 (Boolean)</label>
-                          <span className="mc-poll-input-wrap">
-                            <input
-                              type="number"
-                              min={mcPollUnits.boolean === 'min' ? 0.01 : mcPollUnits.boolean === 's' ? 0.2 : 200}
-                              max={mcPollUnits.boolean === 'min' ? 30 : mcPollUnits.boolean === 's' ? 1800 : 1800000}
-                              step={mcPollUnits.boolean === 'min' ? 0.5 : mcPollUnits.boolean === 's' ? 0.1 : 100}
-                              placeholder={mcPollUnits.boolean === 'min' ? '0.5' : mcPollUnits.boolean === 's' ? '1' : '500'}
-                              value={mcPollDisplay.boolean}
-                              onChange={(e) => setMcPollDisplay((p) => ({ ...p, boolean: e.target.value }))}
-                            />
-                            <select
-                              className="mc-poll-unit-select"
-                              value={mcPollUnits.boolean}
-                              onChange={(e) => {
-                                const newUnit = e.target.value
-                                const ms = parseDisplayToMs(mcPollDisplay.boolean, mcPollUnits.boolean) ?? mcPollEdit.boolean_ms
-                                setMcPollEdit((p) => ({ ...p, boolean_ms: ms }))
-                                setMcPollDisplay((p) => ({ ...p, boolean: String(toDisplay(ms, newUnit)) }))
-                                setMcPollUnits((u) => ({ ...u, boolean: newUnit }))
-                              }}
-                              aria-label="Boolean 단위"
-                            >
-                              <option value="ms">ms</option>
-                              <option value="s">s</option>
-                              <option value="min">min</option>
-                            </select>
-                          </span>
-                        </div>
-                        <div className="field-group">
-                          <label>데이터 (타발수 등)</label>
-                          <span className="mc-poll-input-wrap">
-                            <input
-                              type="number"
-                              min={mcPollUnits.data === 'min' ? 0.01 : mcPollUnits.data === 's' ? 0.2 : 200}
-                              max={mcPollUnits.data === 'min' ? 30 : mcPollUnits.data === 's' ? 1800 : 1800000}
-                              step={mcPollUnits.data === 'min' ? 0.5 : mcPollUnits.data === 's' ? 0.1 : 100}
-                              placeholder={mcPollUnits.data === 'min' ? '0.5' : mcPollUnits.data === 's' ? '1' : '500'}
-                              value={mcPollDisplay.data}
-                              onChange={(e) => setMcPollDisplay((p) => ({ ...p, data: e.target.value }))}
-                            />
-                            <select
-                              className="mc-poll-unit-select"
-                              value={mcPollUnits.data}
-                              onChange={(e) => {
-                                const newUnit = e.target.value
-                                const ms = parseDisplayToMs(mcPollDisplay.data, mcPollUnits.data) ?? mcPollEdit.data_ms
-                                setMcPollEdit((p) => ({ ...p, data_ms: ms }))
-                                setMcPollDisplay((p) => ({ ...p, data: String(toDisplay(ms, newUnit)) }))
-                                setMcPollUnits((u) => ({ ...u, data: newUnit }))
-                              }}
-                              aria-label="데이터 단위"
-                            >
-                              <option value="ms">ms</option>
-                              <option value="s">s</option>
-                              <option value="min">min</option>
-                            </select>
-                          </span>
-                        </div>
-                        <div className="field-group">
-                          <label>금형이름 (String)</label>
-                          <span className="mc-poll-input-wrap">
-                            <input
-                              type="number"
-                              min={mcPollUnits.string === 'min' ? 0.01 : mcPollUnits.string === 's' ? 0.2 : 200}
-                              max={mcPollUnits.string === 'min' ? 30 : mcPollUnits.string === 's' ? 1800 : 1800000}
-                              step={mcPollUnits.string === 'min' ? 0.5 : mcPollUnits.string === 's' ? 0.1 : 100}
-                              placeholder={mcPollUnits.string === 'min' ? '0.5' : mcPollUnits.string === 's' ? '5' : '5000'}
-                              value={mcPollDisplay.string}
-                              onChange={(e) => setMcPollDisplay((p) => ({ ...p, string: e.target.value }))}
-                            />
-                            <select
-                              className="mc-poll-unit-select"
-                              value={mcPollUnits.string}
-                              onChange={(e) => {
-                                const newUnit = e.target.value
-                                const ms = parseDisplayToMs(mcPollDisplay.string, mcPollUnits.string) ?? mcPollEdit.string_ms
-                                setMcPollEdit((p) => ({ ...p, string_ms: ms }))
-                                setMcPollDisplay((p) => ({ ...p, string: String(toDisplay(ms, newUnit)) }))
-                                setMcPollUnits((u) => ({ ...u, string: newUnit }))
-                              }}
-                              aria-label="금형이름 단위"
-                            >
-                              <option value="ms">ms</option>
-                              <option value="s">s</option>
-                              <option value="min">min</option>
-                            </select>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mc-poll-modal-actions">
-                        <button type="button" className="btn btn-primary" onClick={handleMcPollIntervalsSave}>
-                          적용
-                        </button>
-                        <button type="button" className="btn" onClick={() => setMcPollSettingsOpen(false)}>
-                          취소
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 <div className="parsed-meta-toolbar">
                   <span className="parsed-meta-toolbar-label">표시 열</span>
                   <div className="parsed-meta-toolbar-checks">
