@@ -3,3 +3,4 @@ flask-cors==4.0.0
 paho-mqtt==2.1.0
 pymcprotocol==0.3.0
 influxdb-client>=1.38.0
+psycopg[binary]

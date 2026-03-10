@@ -43,6 +43,31 @@ last_sensor_data = {}  # {"VVB001": {"value": ..., "ts": ...}, "TP3237": {...}}
 mqtt_status = {"connected": False, "error": ""}  # 새로 접속 시 화면에 표시용
 
 
+def _bootstrap_poll_rates_from_postgres():
+    """
+    PostgreSQL에 저장된 폴링레이트가 있으면 앱 시작 시 메모리에 반영.
+    DB 미설정/연결불가면 기본값(코드 상수) 유지.
+    """
+    try:
+        from postgres_store import init_postgres, load_poll_intervals
+        ok, msg = init_postgres()
+        if not ok:
+            print("[PostgreSQL] 폴링레이트 영속화 비활성:", msg, flush=True)
+            return
+        saved = load_poll_intervals()
+        if not saved:
+            print("[PostgreSQL] 저장된 폴링레이트 없음(기본값 사용)", flush=True)
+            return
+        from mc_poller import set_poll_intervals
+        set_poll_intervals(saved)
+        print("[PostgreSQL] 폴링레이트 로드:", saved, flush=True)
+    except Exception as e:
+        print("[PostgreSQL] 폴링레이트 로드 실패:", e, flush=True)
+
+
+_bootstrap_poll_rates_from_postgres()
+
+
 def _is_tcp_open(host: str, port: int, timeout_sec: float = 0.4) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout_sec):
@@ -292,15 +317,22 @@ def mc_poll_rates_update():
         return {"error": f"잘못된 요청: {e}"}, 400
 
     try:
-        from mc_poller import set_poll_intervals
+        from mc_poller import normalize_poll_intervals, set_poll_intervals
     except ImportError:
         _backend_dir = os.path.dirname(os.path.abspath(__file__))
         if _backend_dir not in sys.path:
             sys.path.insert(0, _backend_dir)
-        from mc_poller import set_poll_intervals
+        from mc_poller import normalize_poll_intervals, set_poll_intervals
 
     try:
-        set_poll_intervals(interval_map_sec)
+        normalized = normalize_poll_intervals(interval_map_sec)
+    except ValueError as e:
+        return {"error": str(e)}, 400
+
+    try:
+        from postgres_store import save_poll_intervals
+        save_poll_intervals(normalized)
+        set_poll_intervals(normalized)
         return {"ok": True}
     except ValueError as e:
         return {"error": str(e)}, 400

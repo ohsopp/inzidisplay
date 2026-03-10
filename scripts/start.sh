@@ -10,6 +10,15 @@ VENV_DIR="$BACKEND_DIR/venv"
 VENV_PYTHON="$VENV_DIR/bin/python"
 VITE_PORT="${VITE_PORT:-5173}"
 
+# --- PostgreSQL(libpq) 기본 접속정보 ---
+# 필요하면 실행 전에 환경변수로 덮어쓸 수 있음.
+# 예) export PGUSER=my_user PGPASSWORD=my_pass
+export PGHOST="${PGHOST:-127.0.0.1}"
+export PGPORT="${PGPORT:-5432}"
+export PGDATABASE="${PGDATABASE:-plc_test}"
+export PGUSER="${PGUSER:-plc_app}"
+export PGPASSWORD="${PGPASSWORD:-simpac}"
+
 # --- 0) 기존 동일 앱 프로세스 정리 (코드 수정 후 재시작 반영) ---
 pkill -f "$BACKEND_DIR/launcher.py" 2>/dev/null || true
 pkill -f "node_modules/vite/bin/vite.js --port $VITE_PORT" 2>/dev/null || true
@@ -41,8 +50,8 @@ else
     "$VENV_DIR/bin/pip" install --quiet --upgrade pip
     "$VENV_DIR/bin/pip" install --quiet -r "$BACKEND_DIR/requirements.txt"
     echo "백엔드 설정 완료."
-  elif ! "$VENV_PYTHON" -c "import pymcprotocol" 2>/dev/null; then
-    echo "MC 프로토콜용 패키지(pymcprotocol) 설치 중..."
+  elif ! "$VENV_PYTHON" -c "import pymcprotocol, psycopg" 2>/dev/null; then
+    echo "필수 패키지(pymcprotocol, psycopg 등) 설치 중..."
     "$VENV_PYTHON" -m pip install --quiet -r "$BACKEND_DIR/requirements.txt"
     echo "설치 완료."
   fi

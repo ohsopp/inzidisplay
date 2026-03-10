@@ -60,18 +60,29 @@ def get_interval_seconds(key):
         return _interval_by_key.get(key)
 
 
+def normalize_poll_intervals(interval_map_sec):
+    """
+    입력값 검증/정규화 후 {key: sec(float)} 반환. (메모리 변경 없음)
+    """
+    valid_keys = ("50ms", "1s", "1min", "1h")
+    normalized = {}
+    for key in valid_keys:
+        if key not in interval_map_sec:
+            continue
+        value = float(interval_map_sec[key])
+        if value < MIN_INTERVAL_SEC or value > MAX_INTERVAL_SEC:
+            raise ValueError("폴링레이트는 50ms 이상 12시간 이하로 설정해야 합니다.")
+        normalized[key] = value
+    return normalized
+
+
 def set_poll_intervals(interval_map_sec):
     """
     interval_map_sec: {"50ms": sec, "1s": sec, "1min": sec, "1h": sec}
     """
-    valid_keys = ("50ms", "1s", "1min", "1h")
+    normalized = normalize_poll_intervals(interval_map_sec)
     with _interval_lock:
-        for key in valid_keys:
-            if key not in interval_map_sec:
-                continue
-            value = float(interval_map_sec[key])
-            if value < MIN_INTERVAL_SEC or value > MAX_INTERVAL_SEC:
-                raise ValueError("폴링레이트는 50ms 이상 12시간 이하로 설정해야 합니다.")
+        for key, value in normalized.items():
             _interval_by_key[key] = value
 
 
