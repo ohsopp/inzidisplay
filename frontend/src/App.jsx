@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import './App.css'
 import PlcDashboard from './components/PlcDashboard'
+import SensorTrendCharts from './components/SensorTrendCharts'
 
 // 개발 모드: 접속한 호스트(로컬/원격)의 6005 사용 → SSH로 서버 IP 접속해도 API 연결됨
 const API_URL = import.meta.env.DEV ? `http://${window.location.hostname}:6005` : window.location.origin
+const SENSOR_TREND_MAX_POINTS = 240
 
 function hexToBytes(hex) {
   const s = String(hex).replace(/\s/g, '')
@@ -172,6 +174,34 @@ function getDisplayValue(row, valueMap) {
   return valueMap[row.keys[0]]
 }
 
+function toFiniteNumber(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+function parseVibrationTrendPoint(value) {
+  if (!value || typeof value !== 'object') return null
+  const point = {
+    v_rms: toFiniteNumber(value.v_rms),
+    a_peak: toFiniteNumber(value.a_peak),
+    a_rms: toFiniteNumber(value.a_rms),
+    temperature: toFiniteNumber(value.temperature),
+    crest: toFiniteNumber(value.crest),
+  }
+  const hasAny = Object.values(point).some((v) => v !== null)
+  return hasAny ? point : null
+}
+
+function parseTemperatureTrendPoint(value) {
+  if (value && typeof value === 'object') {
+    const inner = value && typeof value.payload === 'object' ? value.payload : value
+    const n = toFiniteNumber(inner.data ?? inner.value ?? inner.temperature ?? inner.vibration)
+    return n === null ? null : { temperature: n }
+  }
+  const n = toFiniteNumber(value)
+  return n === null ? null : { temperature: n }
+}
+
 function App() {
   const [serverConnected, setServerConnected] = useState(false)
   const [activeView, setActiveView] = useState('plc') // 'plc' | 'mc' | 'dashboard'
@@ -187,7 +217,7 @@ function App() {
   const [mcError, setMcError] = useState('')
   const [mcHost, setMcHost] = useState('127.0.0.1')
   const [mcPort, setMcPort] = useState('5002')
-  const [sensorData, setSensorData] = useState({}) // { VVB001: { value, ts }, TP3237: { value, ts } }
+  const [sensorTrend, setSensorTrend] = useState({ VVB001: [], TP3237: [] }) // { topic: [{ ts, ...metrics }] }
   const [mqttConnected, setMqttConnected] = useState(false)
   const [mqttError, setMqttError] = useState('')
   const [csvExportOpen, setCsvExportOpen] = useState(false)
@@ -292,7 +322,24 @@ function App() {
       const data = JSON.parse(e.data || '{}')
       const topic = data.topic
       if (topic) {
-        setSensorData((prev) => ({ ...prev, [topic]: { value: data.value, ts: data.ts } }))
+        const ts = Number(data.ts) || Date.now() / 1000
+        if (topic === 'VVB001') {
+          const trendPoint = parseVibrationTrendPoint(data.value)
+          if (trendPoint) {
+            setSensorTrend((prev) => ({
+              ...prev,
+              VVB001: [...prev.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
+            }))
+          }
+        } else if (topic === 'TP3237') {
+          const trendPoint = parseTemperatureTrendPoint(data.value)
+          if (trendPoint) {
+            setSensorTrend((prev) => ({
+              ...prev,
+              TP3237: [...prev.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
+            }))
+          }
+        }
         // 센서 데이터가 한 번이라도 들어오면 MQTT 연결된 것으로 간주
         setMqttConnected(true)
       }
@@ -300,7 +347,22 @@ function App() {
     es.addEventListener('sensor_data_snapshot', (e) => {
       const data = JSON.parse(e.data || '{}')
       if (data && typeof data === 'object') {
-        setSensorData((prev) => ({ ...prev, ...data }))
+        setSensorTrend((prev) => {
+          const updated = { ...prev }
+          for (const [topic, payload] of Object.entries(data)) {
+            const ts = Number(payload?.ts) || Date.now() / 1000
+            if (topic === 'VVB001') {
+              const trendPoint = parseVibrationTrendPoint(payload?.value)
+              if (!trendPoint) continue
+              updated.VVB001 = [...updated.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
+            } else if (topic === 'TP3237') {
+              const trendPoint = parseTemperatureTrendPoint(payload?.value)
+              if (!trendPoint) continue
+              updated.TP3237 = [...updated.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
+            }
+          }
+          return updated
+        })
         if (Object.keys(data).length > 0) {
           setMqttConnected(true)
         }
@@ -827,85 +889,11 @@ function App() {
                 </span>
                 {mqttError && <p className="dashboard-error">{mqttError}</p>}
               </div>
-              <div className="dashboard-grid">
-                <div className="sensor-panel sensor-panel-vibration">
-                  <div className="sensor-panel-head">
-                    <span className="sensor-panel-label">VVB001</span>
-                    <span className="sensor-panel-desc">진동 센서</span>
-                  </div>
-                  <div className="sensor-panel-body">
-                    {(() => {
-                      const v = sensorData.VVB001?.value
-                      if (!v || typeof v !== 'object') {
-                        return <div className="sensor-panel-empty">데이터 대기 중</div>
-                      }
-                      const num = (x) => {
-                        if (x == null) return '—'
-                        const n = Number(x)
-                        return Number.isFinite(n) ? n.toFixed(2) : String(x)
-                      }
-                      const rows = [
-                        { label: 'v-rms', value: num(v.v_rms), unit: '' },
-                        { label: 'a-peak', value: num(v.a_peak), unit: '' },
-                        { label: 'a-rms', value: num(v.a_rms), unit: '' },
-                        { label: '온도', value: num(v.temperature), unit: '°C' },
-                        { label: 'crest', value: num(v.crest), unit: '' },
-                      ]
-                      return (
-                        <dl className="sensor-rows">
-                          {rows.map(({ label, value, unit }) => (
-                            <div key={label} className="sensor-row">
-                              <dt>{label}</dt>
-                              <dd><span className="sensor-num">{value}</span>{unit && <span className="sensor-unit">{unit}</span>}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      )
-                    })()}
-                  </div>
-                  {sensorData.VVB001?.ts && (
-                    <div className="sensor-panel-footer">
-                      {new Date(sensorData.VVB001.ts * 1000).toLocaleTimeString('ko-KR')}
-                    </div>
-                  )}
-                </div>
-                <div className="sensor-panel sensor-panel-temperature">
-                  <div className="sensor-panel-head">
-                    <span className="sensor-panel-label">TP3237</span>
-                    <span className="sensor-panel-desc">온도 센서</span>
-                  </div>
-                  <div className="sensor-panel-body sensor-panel-body-center">
-                    {(() => {
-                      const v = sensorData.TP3237?.value
-                      if (v == null) return <div className="sensor-panel-empty">데이터 대기 중</div>
-                      let disp = v
-                      if (typeof v === 'object') {
-                        const inner = v && typeof v.payload === 'object' ? v.payload : v
-                        const cand = inner.data ?? inner.value ?? inner.temperature ?? inner.vibration
-                        if (cand != null && typeof cand !== 'object') {
-                          const n = Number(cand)
-                          disp = Number.isFinite(n) ? n.toFixed(2) : String(cand)
-                        } else {
-                          disp = '—'
-                        }
-                      } else if (Number.isFinite(Number(v))) {
-                        const n = Number(v)
-                        disp = n.toFixed(2)
-                      }
-                      return (
-                        <>
-                          <span className="sensor-temp-value">{disp}</span>
-                          <span className="sensor-temp-unit">°C</span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  {sensorData.TP3237?.ts && (
-                    <div className="sensor-panel-footer">
-                      {new Date(sensorData.TP3237.ts * 1000).toLocaleTimeString('ko-KR')}
-                    </div>
-                  )}
-                </div>
+              <div className="dashboard-body">
+                <SensorTrendCharts
+                  vibrationTrend={sensorTrend.VVB001}
+                  temperatureTrend={sensorTrend.TP3237}
+                />
               </div>
             </section>
           )}
