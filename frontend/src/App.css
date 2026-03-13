@@ -364,7 +364,7 @@
 }
 
 .parsed-var-value-wrap--string {
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .boolean-dot-header-spacer {
@@ -397,7 +397,7 @@
 .parsed-var-value--string {
   min-width: 0;
   max-width: 100%;
-  text-align: left;
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

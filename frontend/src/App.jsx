@@ -37,6 +37,18 @@ function toUnsigned(num, len) {
   return u32
 }
 
+function toSigned32FromUnsigned(u) {
+  const v = Number(u) >>> 0
+  return v >= 0x80000000 ? v - 0x100000000 : v
+}
+
+function decodePackedBcdFromUnsigned(u, bits) {
+  const nibbleCount = Math.max(1, Math.floor((Number(bits) || 16) / 4))
+  const hex = Number(u).toString(16).padStart(nibbleCount, '0').slice(-nibbleCount)
+  if (!/^[0-9]+$/.test(hex)) return null
+  return Number(hex)
+}
+
 function decodeForDisplay(raw, info) {
   if (raw === '-' || raw === undefined || raw === null) return '-'
   const dt = (info?.dataType ?? '').toLowerCase()
@@ -47,19 +59,16 @@ function decodeForDisplay(raw, info) {
   if (dt === 'boolean') return String(Number(raw))
 
   if (dt === 'word' || dt === 'dword') {
-    const num = typeof raw === 'number' ? raw : parseInt(raw, 10)
+    const num = Number(raw)
     if (Number.isNaN(num)) return '-'
     const u = toUnsigned(num, len)
-    let display = u
-    if (len === 16) {
-      const s = (u & 0xFFFF) << 16 >> 16
-      if (s < 0) display = 0
-    } else if (len === 32) {
-      const s = (u >>> 0) | 0
-      if (s < 0) display = 0
-    }
-    if (scaleNum === 0.1) return (display * 0.1).toFixed(1)
-    return display
+    const isBcdMarked = /BCD/i.test(String(info?.description || ''))
+    // 기본은 16진수 정수값(Unsigned) 해석, BCD 명시 항목만 packed-BCD 사용.
+    const bcd = isBcdMarked ? decodePackedBcdFromUnsigned(u, len) : null
+    const base = bcd !== null ? bcd : u
+    if (scaleNum === 0.1) return (base * 0.1).toFixed(1)
+    if (scaleNum !== 1) return base * scaleNum
+    return base
   }
 
   if (dt === 'string') {
@@ -222,7 +231,7 @@ function App() {
   const [mcValues, setMcValues] = useState({})
   const [mcConnected, setMcConnected] = useState(false)
   const [mcError, setMcError] = useState('')
-  const [mcHost, setMcHost] = useState('127.0.0.1')
+  const [mcHost, setMcHost] = useState('192.168.0.5')
   const [mcPort, setMcPort] = useState('5002')
   const [sensorTrend, setSensorTrend] = useState({ VVB001: [], TP3237: [] }) // { topic: [{ ts, ...metrics }] }
   const [mqttConnected, setMqttConnected] = useState(false)
@@ -240,18 +249,15 @@ function App() {
   /** Word/Dword: 음수(리셋)일 때 처음 본 값을 시작값으로 저장해 두고, 리셋 시 그 시작값으로 표시 */
   const decodeForDisplayWithReset = (raw, info, rowName) => {
     const dt = (info?.dataType ?? '').toLowerCase()
-    const len = Number(info?.length) || 32
-
-    // 과부족수량(D1814): 32비트 부호 있는 값 그대로 표시 (예: 0xFFFFFA24 → -1500)
-    if (rowName === 'defficiencyQuantity_D1814' && dt === 'dword') {
+    if (rowName === 'defficiencyQuantity_D1814' || rowName === 'defficiencyQuantity_D1815') {
       if (raw === '-' || raw === undefined || raw === null) return '-'
-      const num = typeof raw === 'number' ? raw : parseInt(raw, 10)
-      if (Number.isNaN(num)) return '-'
-      const u = toUnsigned(num, len)
-      const signed = (u >>> 0) | 0
+      const num = Number(raw)
+      if (!Number.isFinite(num)) return '-'
       const scaleStr = String(info?.scale ?? '1').trim()
       const scaleNum = parseFloat(scaleStr) || 1
+      const signed = toSigned32FromUnsigned(toUnsigned(num, 32))
       if (scaleNum === 0.1) return (signed * 0.1).toFixed(1)
+      if (scaleNum !== 1) return signed * scaleNum
       return signed
     }
 
@@ -739,7 +745,7 @@ function App() {
                         type="text"
                         value={mcHost}
                         onChange={(e) => setMcHost(e.target.value)}
-                        placeholder="127.0.0.1"
+                        placeholder="192.168.0.5"
                         disabled={mcConnected}
                       />
                     </div>

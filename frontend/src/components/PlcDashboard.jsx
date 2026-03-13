@@ -88,6 +88,26 @@ const POLL_THREAD_SUBTITLES = {
   '1h': '금형 번호/이름/셋업',
 }
 
+function toUnsigned(num, len) {
+  const bits = Number(len) || 32
+  const u32 = Number(num) >>> 0
+  if (bits <= 8) return u32 & 0xff
+  if (bits <= 16) return u32 & 0xffff
+  return u32
+}
+
+function decodePackedBcdFromUnsigned(u, bits) {
+  const nibbleCount = Math.max(1, Math.floor((Number(bits) || 16) / 4))
+  const hex = Number(u).toString(16).padStart(nibbleCount, '0').slice(-nibbleCount)
+  if (!/^[0-9]+$/.test(hex)) return null
+  return Number(hex)
+}
+
+function toSigned32FromUnsigned(u) {
+  const v = Number(u) >>> 0
+  return v >= 0x80000000 ? v - 0x100000000 : v
+}
+
 function toPollRateDraft(intervalMs) {
   const value = Number(intervalMs)
   if (!Number.isFinite(value) || value <= 0) return { value: '', unit: 'ms' }
@@ -155,10 +175,20 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
     if (raw === '-' || raw === undefined || raw === null || !info) return null
     const dt = String(info?.dataType || '').toLowerCase()
     const scale = parseFloat(String(info?.scale ?? '1')) || 1
+    const len = Number(info?.length) || 32
     const num = Number(raw)
     if (!Number.isFinite(num)) return null
-    if (dt === 'word') return (num & 0xFFFF) * scale
-    if (dt === 'dword') return (num >>> 0) * scale
+    if (dt === 'word' || dt === 'dword') {
+      const u = toUnsigned(num, len)
+      // 과부족수량처럼 음수 의미를 가진 Dword는 signed 32bit로 표시
+      if (dt === 'dword' && String(info?.description || '').includes('-값으로 표현')) {
+        return toSigned32FromUnsigned(u) * scale
+      }
+      const isBcdMarked = /BCD/i.test(String(info?.description || ''))
+      const bcd = isBcdMarked ? decodePackedBcdFromUnsigned(u, len) : null
+      const base = bcd !== null ? bcd : u
+      return base * scale
+    }
     if (dt === 'boolean') return Number(Boolean(num))
     return num * scale
   }
