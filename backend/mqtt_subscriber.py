@@ -106,7 +106,6 @@ def _run_mqtt_loop(on_message):
             if on_message:
                 on_message("mqtt_error", {"message": err})
             return
-        print(f"[MQTT] 연결됨 {MQTT_BROKER}:{MQTT_PORT}, 구독: {TOPICS}", flush=True)
         for topic in TOPICS:
             client.subscribe(topic, qos=0)
         if on_message:
