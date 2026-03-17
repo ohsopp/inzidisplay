@@ -248,6 +248,7 @@ function App() {
   const [csvExportError, setCsvExportError] = useState('')
   const [csvExportLoading, setCsvExportLoading] = useState(false)
   const eventSourceRef = useRef(null)
+  const reconnectTimerRef = useRef(null)
   /** 타발수 등: 리셋(음수) 시 처음 보였던 시작값으로 표시 (예: 10000 시작 → 리셋 시 10000) */
   const counterStartRef = useRef({})
 
@@ -305,115 +306,131 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const es = new EventSource(`${API_URL}/api/events`)
+    let isUnmounted = false
 
-    es.onopen = () => {
-      setServerConnected(true)
-    }
+    const connectEventSource = () => {
+      if (isUnmounted) return
+      const es = new EventSource(`${API_URL}/api/events`)
+      eventSourceRef.current = es
 
-    es.onerror = () => {
-      setServerConnected(false)
-      es.close()
-    }
-
-    es.addEventListener('mc_data', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      if (data.parsed && typeof data.parsed === 'object') {
-        setMcValues((prev) => {
-          const next = { ...prev }
-          for (const [key, value] of Object.entries(data.parsed)) {
-            // 폴링 순간 오류/타임아웃으로 들어온 '-'는 이전 정상값을 유지해 깜빡임을 줄인다.
-            if (value === '-' || value === null || value === undefined) continue
-            next[key] = value
-          }
-          return next
-        })
+      es.onopen = () => {
+        setServerConnected(true)
       }
-    })
 
-    es.addEventListener('mc_connected', () => {
-      setMcConnected(true)
-      setMcError('')
-    })
+      es.onerror = () => {
+        setServerConnected(false)
+        es.close()
+        if (isUnmounted) return
+        reconnectTimerRef.current = setTimeout(connectEventSource, 1500)
+      }
 
-    es.addEventListener('mc_disconnected', () => {
-      setMcConnected(false)
-    })
-
-    es.addEventListener('mc_error', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      setMcError(data.message || 'MC 프로토콜 오류')
-    })
-
-    es.addEventListener('sensor_data', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      const topic = data.topic
-      if (topic) {
-        const ts = Number(data.ts) || Date.now() / 1000
-        if (topic === 'VVB001') {
-          const trendPoint = parseVibrationTrendPoint(data.value)
-          if (trendPoint) {
-            setSensorTrend((prev) => ({
-              ...prev,
-              VVB001: [...prev.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
-            }))
-          }
-        } else if (topic === 'TP3237') {
-          const trendPoint = parseTemperatureTrendPoint(data.value)
-          if (trendPoint) {
-            setSensorTrend((prev) => ({
-              ...prev,
-              TP3237: [...prev.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
-            }))
-          }
+      es.addEventListener('mc_data', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        if (data.parsed && typeof data.parsed === 'object') {
+          setMcValues((prev) => {
+            const next = { ...prev }
+            for (const [key, value] of Object.entries(data.parsed)) {
+              // 폴링 순간 오류/타임아웃으로 들어온 '-'는 이전 정상값을 유지해 깜빡임을 줄인다.
+              if (value === '-' || value === null || value === undefined) continue
+              next[key] = value
+            }
+            return next
+          })
         }
-        // 센서 데이터가 한 번이라도 들어오면 MQTT 연결된 것으로 간주
-        setMqttConnected(true)
-      }
-    })
-    es.addEventListener('sensor_data_snapshot', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      if (data && typeof data === 'object') {
-        setSensorTrend((prev) => {
-          const updated = { ...prev }
-          for (const [topic, payload] of Object.entries(data)) {
-            const ts = Number(payload?.ts) || Date.now() / 1000
-            if (topic === 'VVB001') {
-              const trendPoint = parseVibrationTrendPoint(payload?.value)
-              if (!trendPoint) continue
-              updated.VVB001 = [...updated.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
-            } else if (topic === 'TP3237') {
-              const trendPoint = parseTemperatureTrendPoint(payload?.value)
-              if (!trendPoint) continue
-              updated.TP3237 = [...updated.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
+      })
+
+      es.addEventListener('mc_connected', () => {
+        setMcConnected(true)
+        setMcError('')
+      })
+
+      es.addEventListener('mc_disconnected', () => {
+        setMcConnected(false)
+      })
+
+      es.addEventListener('mc_error', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        setMcError(data.message || 'MC 프로토콜 오류')
+      })
+
+      es.addEventListener('sensor_data', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        const topic = data.topic
+        if (topic) {
+          const ts = Number(data.ts) || Date.now() / 1000
+          if (topic === 'VVB001') {
+            const trendPoint = parseVibrationTrendPoint(data.value)
+            if (trendPoint) {
+              setSensorTrend((prev) => ({
+                ...prev,
+                VVB001: [...prev.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
+              }))
+            }
+          } else if (topic === 'TP3237') {
+            const trendPoint = parseTemperatureTrendPoint(data.value)
+            if (trendPoint) {
+              setSensorTrend((prev) => ({
+                ...prev,
+                TP3237: [...prev.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS),
+              }))
             }
           }
-          return updated
-        })
-        if (Object.keys(data).length > 0) {
+          // 센서 데이터가 한 번이라도 들어오면 MQTT 연결된 것으로 간주
           setMqttConnected(true)
         }
-      }
-    })
-    es.addEventListener('mqtt_connected', () => {
-      setMqttConnected(true)
-      setMqttError('')
-    })
-    es.addEventListener('mqtt_disconnected', () => setMqttConnected(false))
-    es.addEventListener('mqtt_error', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      setMqttError(data.message || 'MQTT 오류')
-      setMqttConnected(false)
-    })
-    es.addEventListener('mqtt_status_snapshot', (e) => {
-      const data = JSON.parse(e.data || '{}')
-      setMqttConnected(!!data.connected)
-      setMqttError(data.error || '')
-    })
+      })
+      es.addEventListener('sensor_data_snapshot', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        if (data && typeof data === 'object') {
+          setSensorTrend((prev) => {
+            const updated = { ...prev }
+            for (const [topic, payload] of Object.entries(data)) {
+              const ts = Number(payload?.ts) || Date.now() / 1000
+              if (topic === 'VVB001') {
+                const trendPoint = parseVibrationTrendPoint(payload?.value)
+                if (!trendPoint) continue
+                updated.VVB001 = [...updated.VVB001, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
+              } else if (topic === 'TP3237') {
+                const trendPoint = parseTemperatureTrendPoint(payload?.value)
+                if (!trendPoint) continue
+                updated.TP3237 = [...updated.TP3237, { ts, ...trendPoint }].slice(-SENSOR_TREND_MAX_POINTS)
+              }
+            }
+            return updated
+          })
+          if (Object.keys(data).length > 0) {
+            setMqttConnected(true)
+          }
+        }
+      })
+      es.addEventListener('mqtt_connected', () => {
+        setMqttConnected(true)
+        setMqttError('')
+      })
+      es.addEventListener('mqtt_disconnected', () => setMqttConnected(false))
+      es.addEventListener('mqtt_error', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        setMqttError(data.message || 'MQTT 오류')
+        setMqttConnected(false)
+      })
+      es.addEventListener('mqtt_status_snapshot', (e) => {
+        const data = JSON.parse(e.data || '{}')
+        setMqttConnected(!!data.connected)
+        setMqttError(data.error || '')
+      })
+    }
 
-    eventSourceRef.current = es
+    connectEventSource()
     return () => {
-      es.close()
+      isUnmounted = true
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
     }
   }, [])
 

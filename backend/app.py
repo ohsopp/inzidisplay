@@ -26,6 +26,7 @@ CORS(
 
 client_queues = []
 client_queues_lock = threading.Lock()
+mc_control_lock = threading.Lock()
 
 # MC Protocol (3E)
 mc_thread = None
@@ -245,32 +246,36 @@ def mc_connect():
     except (TypeError, ValueError) as e:
         return {"error": f"잘못된 요청: {e}"}, 400
 
-    if mc_thread and mc_thread.is_alive():
-        return {"error": "이미 MC 프로토콜 폴링이 실행 중입니다."}, 400
+    with mc_control_lock:
+        if mc_thread and mc_thread.is_alive():
+            # 다중 클라이언트 동시 클릭 시, 동일 대상이면 성공으로 간주(멱등 처리).
+            if mc_state and mc_state.get("host") == host and int(mc_state.get("port", 0)) == port:
+                return {"ok": True, "already_running": True}
+            return {"error": "이미 MC 프로토콜 폴링이 실행 중입니다."}, 409
 
-    _start_fake_server_async(host, port)
+        _start_fake_server_async(host, port)
 
-    try:
-        run_poller = _get_run_poller()
-    except Exception as e:
-        return {"error": "mc_poller를 불러올 수 없습니다: %s" % e}, 500
+        try:
+            run_poller = _get_run_poller()
+        except Exception as e:
+            return {"error": "mc_poller를 불러올 수 없습니다: %s" % e}, 500
 
-    try:
-        mc_stop_event = threading.Event()
-        mc_thread = threading.Thread(
-            target=run_poller,
-            args=(host, port, _mc_on_parsed, _mc_on_error, mc_stop_event),
-            daemon=True,
-        )
-        mc_thread.start()
-        mc_state = {"host": host, "port": port}
-        mc_influx_stop_event = None
-        print("[MC] 연결됨 %s:%s → 폴링 시작" % (host, port), flush=True)
-        broadcast("mc_connected", mc_state)
-        return {"ok": True}
-    except Exception as e:
-        print("[MC] connect 예외:", e, flush=True)
-        return {"error": str(e)}, 500
+        try:
+            mc_stop_event = threading.Event()
+            mc_thread = threading.Thread(
+                target=run_poller,
+                args=(host, port, _mc_on_parsed, _mc_on_error, mc_stop_event),
+                daemon=True,
+            )
+            mc_thread.start()
+            mc_state = {"host": host, "port": port}
+            mc_influx_stop_event = None
+            print("[MC] 연결됨 %s:%s → 폴링 시작" % (host, port), flush=True)
+            broadcast("mc_connected", mc_state)
+            return {"ok": True}
+        except Exception as e:
+            print("[MC] connect 예외:", e, flush=True)
+            return {"error": str(e)}, 500
 
 
 @app.route("/api/mc/disconnect", methods=["POST", "OPTIONS"])
@@ -278,14 +283,15 @@ def mc_disconnect():
     if request.method == "OPTIONS":
         return "", 204
     global mc_thread, mc_stop_event, mc_state, mc_influx_stop_event
-    if mc_stop_event:
-        mc_stop_event.set()
-    if mc_influx_stop_event:
-        mc_influx_stop_event.set()
-    mc_thread = None
-    mc_stop_event = None
-    mc_state = None
-    mc_influx_stop_event = None
+    with mc_control_lock:
+        if mc_stop_event:
+            mc_stop_event.set()
+        if mc_influx_stop_event:
+            mc_influx_stop_event.set()
+        mc_thread = None
+        mc_stop_event = None
+        mc_state = None
+        mc_influx_stop_event = None
     broadcast("mc_disconnected", {})
     return {"ok": True}
 

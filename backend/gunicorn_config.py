@@ -1,7 +1,7 @@
 """
 Gunicorn 설정 — 실제 서버 배포용.
 - bind: 127.0.0.1:8000 (Nginx가 이 주소로 프록시. 8000 사용 중이면 8001 등으로 변경)
-- workers: 2 (CPU 코어 적을 때 적당. I/O·SSE 많으면 2~4)
+- workers: 1 (앱이 프로세스 전역 상태/SSE 큐를 사용하므로 멀티워커 비권장)
 - timeout: 120 (SSE 장기 연결 허용)
 - chdir: backend 디렉터리
 - wsgi_app: app:app
@@ -16,8 +16,12 @@ bind = os.environ.get("GUNICORN_BIND", "127.0.0.1:8000")
 chdir = _chdir
 wsgi_app = "app:app"
 
-workers = int(os.environ.get("GUNICORN_WORKERS", 2))
-threads = int(os.environ.get("GUNICORN_THREADS", 2))
+# app.py는 프로세스 전역 메모리(mc_thread/client_queues)를 사용하므로 기본은 1워커 고정.
+# 필요 시 Redis/pubsub 등 외부 상태 저장소로 전환 후 멀티워커 확장 권장.
+workers = int(os.environ.get("GUNICORN_WORKERS", 1))
+# SSE 연결(/api/events)은 연결당 스레드 1개를 장시간 점유하므로 여유 스레드가 필수.
+# 기본 16으로 두고 동시 사용자 수에 맞춰 환경변수로 조정한다.
+threads = int(os.environ.get("GUNICORN_THREADS", 16))
 worker_class = "gthread"
 timeout = int(os.environ.get("GUNICORN_TIMEOUT", 120))
 keepalive = 5
