@@ -1289,17 +1289,28 @@
   background: rgba(59, 130, 246, 0.1);
 }
 
+/* 목록 영역 높이를 항상 최대(스크롤 영역과 동일)로 유지 — 항목 적을 때 박스가 줄어들지 않음 */
+.plc-alert-body {
+  flex: 1;
+  min-height: 312px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .plc-alert-empty {
   margin-top: 0.9rem;
+  flex: 1;
 }
 
 .plc-alert-list {
   margin-top: 0.68rem;
+  flex: 1;
+  min-height: 0;
   max-height: 312px;
   overflow-y: auto;
   padding-right: 0.1rem;
   padding-bottom: 0.1rem;
-  min-height: 0;
   display: grid;
   gap: 0.5rem;
 }

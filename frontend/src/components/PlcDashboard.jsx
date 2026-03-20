@@ -756,24 +756,26 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
               <span className="badge warning">주의 {warningCounts.warning}</span>
               <span className="badge info">안내 {warningCounts.info}</span>
             </div>
-            {activeWarnings.length === 0 ? (
-              <p className="plc-alert-empty">현재 활성화된 주요 경고가 없습니다.</p>
-            ) : (
-              <ul className="plc-alert-list">
-                {activeWarnings.map((alarm) => (
-                  <li key={alarm.key} className={`plc-alert-item ${alarm.level}`}>
-                    <span className="plc-alert-item-main">
-                      <i className="plc-alert-dot" aria-hidden />
-                      <span className="plc-alert-texts">
-                        <strong>{alarm.label}</strong>
-                        <small>{alarm.key}</small>
+            <div className="plc-alert-body">
+              {activeWarnings.length === 0 ? (
+                <p className="plc-alert-empty">현재 활성화된 주요 경고가 없습니다.</p>
+              ) : (
+                <ul className="plc-alert-list">
+                  {activeWarnings.map((alarm) => (
+                    <li key={alarm.key} className={`plc-alert-item ${alarm.level}`}>
+                      <span className="plc-alert-item-main">
+                        <i className="plc-alert-dot" aria-hidden />
+                        <span className="plc-alert-texts">
+                          <strong>{alarm.label}</strong>
+                          <small>{alarm.key}</small>
+                        </span>
                       </span>
-                    </span>
-                    <em>{alarm.level === 'critical' ? '치명' : alarm.level === 'warning' ? '주의' : '안내'}</em>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      <em>{alarm.level === 'critical' ? '치명' : alarm.level === 'warning' ? '주의' : '안내'}</em>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
 
