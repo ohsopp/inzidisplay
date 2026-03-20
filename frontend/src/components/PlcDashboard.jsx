@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import './PlcDashboard.css'
 
 const DEFAULT_IO_PAGE_SIZE = 10
@@ -171,6 +171,22 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
     })
   }
 
+  const getTempStatus = (value) => {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return { key: 'unknown', label: '수신 대기' }
+    if (n >= 60) return { key: 'danger', label: '고온 위험' }
+    if (n >= 52) return { key: 'warning', label: '상승 주의' }
+    return { key: 'safe', label: '정상 온도' }
+  }
+
+  const getOilStatus = (value) => {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return { key: 'unknown', label: '수신 대기' }
+    if (n < 20) return { key: 'danger', label: '저유량' }
+    if (n < 45) return { key: 'warning', label: '주의 유량' }
+    return { key: 'safe', label: '정상 유량' }
+  }
+
   const decodeMetricValue = (raw, info) => {
     if (raw === '-' || raw === undefined || raw === null || !info) return null
     const dt = String(info?.dataType || '').toLowerCase()
@@ -179,7 +195,7 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
     const num = Number(raw)
     if (!Number.isFinite(num)) return null
     if (dt === 'word' || dt === 'dword') {
-      const u = toUnsigned(num, len)
+      const u = dt === 'dword' ? toUnsigned(num, 32) : toUnsigned(num, len)
       // 과부족수량처럼 음수 의미를 가진 Dword는 signed 32bit로 표시
       if (dt === 'dword' && String(info?.description || '').includes('-값으로 표현')) {
         return toSigned32FromUnsigned(u) * scale
@@ -217,7 +233,7 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
     const dieHeight = getMetricByCandidates(['currentDieHeight_D711', 'nextDieHeight_D511'])
     const currentProduction = getMetricByCandidates(['currentProduction_D1812', 'production_D1818', 'production_D1819'])
     const balanceAir = getMetricByCandidates(['currentBalanceAirPressure_D713', 'nextBalanceAirPressure_D513'])
-    const counterQty = getMetricByCandidates(['todayStrokeCount_D1912', 'totalCounter_D1820'])
+    const counterQty = getMetricByCandidates(['totalCounter_D1820', 'todayStrokeCount_D1912'])
     const targetProduction = getMetricByCandidates(['productionCounter_D1810', 'presetCounter_D1816'])
     const pressAngle = getMetricByCandidates(['pressAngle_D100'])
     const spm = getMetricByCandidates(['strokePerMinute_D126', 'cPMCyclePerMinute_D104'])
@@ -281,8 +297,8 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
     const byKey = Object.fromEntries(warningConfig.map((w) => [w.key, w]))
     const result = []
     for (const [name] of ioVariableList) {
-      const addr = extractAddress(name)
-      if (!addr || addr[0] !== 'M') continue
+      const dt = String(infoByName[name]?.dataType || '').toLowerCase()
+      if (dt !== 'boolean') continue
       if (Number(mcValues[name]) !== 1) continue
       const preset = byKey[name]
       result.push(
@@ -404,13 +420,26 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
       const value = getMetricByCandidates([key])
       return { key, label: tempPointLabels[key] || key, value }
     }).filter((row) => row.value !== null)
-    if (!rows.length) return { avg: null, max: null, level: 'unknown' }
+    if (!rows.length) return { rows: [], avg: null, max: null, level: 'unknown', alarmCount: 0 }
     const sum = rows.reduce((acc, row) => acc + row.value, 0)
     const avg = sum / rows.length
     const hottest = rows.reduce((max, row) => (max && max.value > row.value ? max : row), null)
     const level = avg >= 60 ? 'high' : avg >= 52 ? 'caution' : 'normal'
-    return { avg, max: hottest, level }
+    const alarmCount = rows.filter((row) => row.value >= 60).length
+    return { rows, avg, max: hottest, level, alarmCount }
   }, [mcValues, infoByName])
+
+  const oilSupplyRows = useMemo(() => ([
+    { key: 'oilSupplyCountSlide_D20', label: '슬라이드 오일 공급량' },
+    { key: 'oilSupplyCountBalanceCylinder_D21', label: '바란스실린더 오일 공급량' },
+    { key: 'oilSupplyCountCrownLeft_D22', label: '크라운 좌측 오일 공급량' },
+    { key: 'oilSupplyCountCrownRight_D23', label: '크라운 우측 오일 공급량' },
+  ].map((row) => ({
+    ...row,
+    value: getMetricByCandidates([row.key]),
+  }))), [mcValues, infoByName])
+
+  const tempSummaryStatus = getTempStatus(pressTemps.avg)
 
   const operationScore = useMemo(() => {
     let score = 100
@@ -481,11 +510,10 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
   const nextMoldPreview = moldCatalog[(moldIndex + 1) % moldCatalog.length] || selectedMold
 
   const counterData = useMemo(() => ({
-    total: getMetricByCandidates(['totalCounter_D1820']),
-    plan: getMetricByCandidates(['productionCounter_D1810']),
-    current: getMetricByCandidates(['currentProduction_D1812', 'production_D1818']),
-    preset: getMetricByCandidates(['presetCounter_D1816']),
-    deficiency: getMetricByCandidates(['defficiencyQuantity_D1814']),
+    totalStroke: getMetricByCandidates(['totalCounter_D1820']),
+    targetStroke: getMetricByCandidates(['productionCounter_D1810']),
+    currentStroke: getMetricByCandidates(['currentProduction_D1812', 'production_D1818']),
+    shortageQuantity: getMetricByCandidates(['defficiencyQuantity_D1814']),
   }), [mcValues, infoByName])
 
   const moldViewData = useMemo(() => {
@@ -638,99 +666,6 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
       </div>
 
       {activeTab === 'main' && <div className="plc-body">
-        <div className="plc-gauge-card">
-          <div className="plc-gauge-head">
-            <span>프레스 각도</span>
-            <span className="plc-gauge-sub">실시간 오퍼레이션</span>
-          </div>
-          <div className="plc-gauge-value">
-            {formatMetric(plcMetrics.pressAngle, 0)}
-            <small>°</small>
-          </div>
-          <div className="plc-gauge-progress-wrap">
-            <div className="plc-gauge-progress-track">
-              <div
-                className="plc-gauge-progress-fill"
-                style={{ width: `${Math.max(0, Math.min(100, ((plcMetrics.pressAngle ?? 0) / 360) * 100))}%` }}
-              />
-            </div>
-            <div className="plc-gauge-progress-labels">
-              <span>0°</span>
-              <span>180°</span>
-              <span>360°</span>
-            </div>
-          </div>
-          <div className="plc-gauge-meta">
-            <span>SPM</span>
-            <strong>{formatMetric(plcMetrics.spm, 1)}</strong>
-          </div>
-          <div className="plc-gauge-extra">
-            <span>현재 생산량 {formatMetric(plcMetrics.currentProduction, 0)} ea</span>
-            <span>바란스 {formatMetric(plcMetrics.balanceAir, 1)} kg/cm²</span>
-          </div>
-        </div>
-
-        <div className="plc-score-card">
-          <h3>운전 스코어</h3>
-          <div className="plc-score-body">
-            <div
-              className="plc-score-ring"
-              style={{
-                background: `conic-gradient(var(--accent) 0 ${operationScore}%, rgba(139, 156, 179, 0.2) ${operationScore}% 100%)`,
-              }}
-            >
-              <span>{operationScore}</span>
-            </div>
-            <div className="plc-score-meta">
-              <p>경고/온도/공압을 반영한 실시간 상태 지수</p>
-              <div className="plc-score-chips">
-                <span className="chip critical">치명 {warningCounts.critical}</span>
-                <span className="chip warning">주의 {warningCounts.warning}</span>
-                <span className="chip info">안내 {warningCounts.info}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="plc-kpi-grid">
-          <article className="plc-kpi-card kpi-dieheight">
-            <div className="plc-kpi-head">
-              <span className="plc-kpi-label">다이하이트</span>
-              <small>D711</small>
-            </div>
-            <strong className="plc-kpi-value">{formatMetric(plcMetrics.dieHeight, 1)}</strong>
-            <span className="plc-kpi-unit">mm</span>
-            <div className="plc-kpi-line" aria-hidden />
-          </article>
-          <article className="plc-kpi-card kpi-production">
-            <div className="plc-kpi-head">
-              <span className="plc-kpi-label">현재 생산량</span>
-              <small>D1812</small>
-            </div>
-            <strong className="plc-kpi-value">{formatMetric(plcMetrics.currentProduction, 0)}</strong>
-            <span className="plc-kpi-unit">ea</span>
-            <div className="plc-kpi-line" aria-hidden />
-          </article>
-          <article className="plc-kpi-card kpi-air">
-            <div className="plc-kpi-head">
-              <span className="plc-kpi-label">바란스 에어압력</span>
-              <small>D713</small>
-            </div>
-            <strong className="plc-kpi-value">{formatMetric(plcMetrics.balanceAir, 1)}</strong>
-            <span className="plc-kpi-unit">kg/cm²</span>
-            <div className="plc-kpi-line" aria-hidden />
-          </article>
-          <article className="plc-kpi-card kpi-counter">
-            <div className="plc-kpi-head">
-              <span className="plc-kpi-label">카운터 수량</span>
-              <small>D1912</small>
-            </div>
-            <strong className="plc-kpi-value">{formatMetric(plcMetrics.counterQty, 0)}</strong>
-            <span className="plc-kpi-unit">count</span>
-            <div className="plc-kpi-line" aria-hidden />
-          </article>
-        </div>
-
         <div className="plc-production-card">
           <div className="plc-production-head">
             <span>생산 진행률</span>
@@ -745,99 +680,152 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
           </div>
         </div>
 
-        <div className="plc-trend-card">
-          <div className="plc-trend-head">
-            <h3>실시간 트렌드</h3>
-            <span>최근 24포인트</span>
+        <div className="plc-main-left">
+          <div className="plc-gauge-card">
+            <div className="plc-gauge-head">
+              <span>프레스 각도</span>
+              <span className="plc-gauge-sub">실시간 오퍼레이션</span>
+            </div>
+            <div className="plc-gauge-value">
+              {formatMetric(plcMetrics.pressAngle, 0)}
+              <small>°</small>
+            </div>
+            <div className="plc-gauge-progress-wrap">
+              <div className="plc-gauge-progress-track">
+                <div
+                  className="plc-gauge-progress-fill"
+                  style={{ width: `${Math.max(0, Math.min(100, ((plcMetrics.pressAngle ?? 0) / 360) * 100))}%` }}
+                />
+              </div>
+              <div className="plc-gauge-progress-labels">
+                <span>0°</span>
+                <span>180°</span>
+                <span>360°</span>
+              </div>
+            </div>
           </div>
-          <div className="plc-trend-grid">
-            <div className="plc-trend-item">
-              <strong>SPM</strong>
-              <svg viewBox="0 0 180 54" className="plc-spark">
-                <polyline points={buildSparklinePoints(plcTrend.spm)} />
-              </svg>
-              <span>{formatMetric(plcMetrics.spm, 1)}</span>
+
+          <div className="plc-kpi-grid">
+            <article className="plc-kpi-card kpi-dieheight">
+              <div className="plc-kpi-head">
+                <span className="plc-kpi-label">다이하이트</span>
+                <small>D711</small>
+              </div>
+              <strong className="plc-kpi-value">{formatMetric(plcMetrics.dieHeight, 1)}</strong>
+              <span className="plc-kpi-unit">mm</span>
+              <div className="plc-kpi-line" aria-hidden />
+            </article>
+            <article className="plc-kpi-card kpi-production">
+              <div className="plc-kpi-head">
+                <span className="plc-kpi-label">현재 생산량</span>
+                <small>D1812</small>
+              </div>
+              <strong className="plc-kpi-value">{formatMetric(plcMetrics.currentProduction, 0)}</strong>
+              <span className="plc-kpi-unit">ea</span>
+              <div className="plc-kpi-line" aria-hidden />
+            </article>
+            <article className="plc-kpi-card kpi-air">
+              <div className="plc-kpi-head">
+                <span className="plc-kpi-label">바란스 에어압력</span>
+                <small>D713</small>
+              </div>
+              <strong className="plc-kpi-value">{formatMetric(plcMetrics.balanceAir, 1)}</strong>
+              <span className="plc-kpi-unit">kg/cm²</span>
+              <div className="plc-kpi-line" aria-hidden />
+            </article>
+            <article className="plc-kpi-card kpi-counter">
+              <div className="plc-kpi-head">
+                <span className="plc-kpi-label">카운터 수량</span>
+                <small>D1820</small>
+              </div>
+              <strong className="plc-kpi-value">{formatMetric(plcMetrics.counterQty, 0)}</strong>
+              <span className="plc-kpi-unit">count</span>
+              <div className="plc-kpi-line" aria-hidden />
+            </article>
+          </div>
+        </div>
+
+        <div className="plc-main-right">
+          <div className="plc-alert-card">
+            <div className="plc-alert-head">
+              <h3>주요 경고등</h3>
+              <span className="plc-alert-total">{activeWarnings.length}</span>
             </div>
-            <div className="plc-trend-item">
-              <strong>Balance Air</strong>
-              <svg viewBox="0 0 180 54" className="plc-spark">
-                <polyline points={buildSparklinePoints(plcTrend.balanceAir)} />
-              </svg>
-              <span>{formatMetric(plcMetrics.balanceAir, 1)} kg/cm²</span>
+            <div className="plc-alert-summary">
+              <span className="badge critical">치명 {warningCounts.critical}</span>
+              <span className="badge warning">주의 {warningCounts.warning}</span>
+              <span className="badge info">안내 {warningCounts.info}</span>
             </div>
-            <div className="plc-trend-item">
-              <strong>진행률</strong>
-              <svg viewBox="0 0 180 54" className="plc-spark">
-                <polyline points={buildSparklinePoints(plcTrend.productionRate)} />
-              </svg>
-              <span>{productionRate.toFixed(1)}%</span>
-            </div>
+            {activeWarnings.length === 0 ? (
+              <p className="plc-alert-empty">현재 활성화된 주요 경고가 없습니다.</p>
+            ) : (
+              <ul className="plc-alert-list">
+                {activeWarnings.map((alarm) => (
+                  <li key={alarm.key} className={`plc-alert-item ${alarm.level}`}>
+                    <span className="plc-alert-item-main">
+                      <i className="plc-alert-dot" aria-hidden />
+                      <span className="plc-alert-texts">
+                        <strong>{alarm.label}</strong>
+                        <small>{alarm.key}</small>
+                      </span>
+                    </span>
+                    <em>{alarm.level === 'critical' ? '치명' : alarm.level === 'warning' ? '주의' : '안내'}</em>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         <div className="plc-insight-card">
           <div className="plc-insight-head">
-            <h3>온도 인사이트</h3>
+            <h3>구동부 온도 모니터</h3>
             <span className={`temp-level ${pressTemps.level}`}>
               {pressTemps.level === 'high' ? '고온' : pressTemps.level === 'caution' ? '주의' : pressTemps.level === 'normal' ? '정상' : '대기'}
             </span>
           </div>
-          <div className="plc-insight-grid">
-            <div>
-              <p>평균 구동부 온도</p>
+          <div className="plc-insight-grid plc-insight-grid-temperature">
+            <div className={`plc-insight-item status-${tempSummaryStatus.key}`}>
+              <p>평균 온도</p>
               <strong>{pressTemps.avg === null ? '-' : `${formatMetric(pressTemps.avg, 1)} °C`}</strong>
+              <span className={`plc-insight-state ${tempSummaryStatus.key}`}>{tempSummaryStatus.label}</span>
             </div>
-            <div>
-              <p>최고 온도 포인트</p>
-              <strong>
-                {pressTemps.max
-                  ? `${pressTemps.max.label} / ${formatMetric(pressTemps.max.value, 1)} °C`
-                  : '-'}
-              </strong>
+            <div className={`plc-insight-item status-${getTempStatus(pressTemps.max?.value).key}`}>
+              <p>최고 온도 지점</p>
+              <strong>{pressTemps.max ? `${pressTemps.max.label} / ${formatMetric(pressTemps.max.value, 1)} °C` : '-'}</strong>
+              <span className={`plc-insight-state ${getTempStatus(pressTemps.max?.value).key}`}>{getTempStatus(pressTemps.max?.value).label}</span>
             </div>
+            <div className={`plc-insight-item status-${pressTemps.alarmCount > 0 ? 'danger' : 'safe'}`}>
+              <p>60°C 알람 지점 수</p>
+              <strong>{pressTemps.alarmCount}개</strong>
+              <span className={`plc-insight-state ${pressTemps.alarmCount > 0 ? 'danger' : 'safe'}`}>
+                {pressTemps.alarmCount > 0 ? '즉시 점검' : '정상 범위'}
+              </span>
+            </div>
+            {pressTemps.rows.map((row) => (
+              <div key={row.key} className={`plc-insight-item status-${getTempStatus(row.value).key}`}>
+                <p>{row.label}</p>
+                <strong>{formatMetric(row.value, 1)} °C</strong>
+                <span className={`plc-insight-state ${getTempStatus(row.value).key}`}>{getTempStatus(row.value).label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="plc-signal-card">
-          <h3>타워램프</h3>
-          <div className="plc-signal-lights">
-            <span className={`plc-light red ${Number(mcValues.warningLightRed_Y14C) === 1 ? 'on' : ''}`}>적색</span>
-            <span className={`plc-light yellow ${Number(mcValues.warningLightYellow_Y14D) === 1 ? 'on' : ''}`}>황색</span>
-            <span className={`plc-light green ${Number(mcValues.warningLightGreen_Y14E) === 1 ? 'on' : ''}`}>녹색</span>
+        <div className="plc-insight-card">
+          <div className="plc-insight-head">
+            <h3>오일 공급량 모니터</h3>
+            <span className="temp-level">1분 기준</span>
           </div>
-          <p className="plc-signal-buzzer">
-            부저: {Number(mcValues.towerLampBuzzer_Y14F) === 1 ? '동작 중' : '정상'}
-          </p>
-        </div>
-
-        <div className="plc-alert-card">
-          <div className="plc-alert-head">
-            <h3>주요 경고등</h3>
-            <span className="plc-alert-total">{activeWarnings.length}</span>
+          <div className="plc-insight-grid plc-insight-grid-oil">
+            {oilSupplyRows.map((row) => (
+              <div key={row.key} className={`plc-insight-item status-${getOilStatus(row.value).key}`}>
+                <p>{row.label}</p>
+                <strong>{formatMetric(row.value, 0)} count/min</strong>
+                <span className={`plc-insight-state ${getOilStatus(row.value).key}`}>{getOilStatus(row.value).label}</span>
+              </div>
+            ))}
           </div>
-          <div className="plc-alert-summary">
-            <span className="badge critical">치명 {warningCounts.critical}</span>
-            <span className="badge warning">주의 {warningCounts.warning}</span>
-            <span className="badge info">안내 {warningCounts.info}</span>
-          </div>
-          {activeWarnings.length === 0 ? (
-            <p className="plc-alert-empty">현재 활성화된 주요 경고가 없습니다.</p>
-          ) : (
-            <ul className="plc-alert-list">
-              {activeWarnings.map((alarm) => (
-                <li key={alarm.key} className={`plc-alert-item ${alarm.level}`}>
-                  <span className="plc-alert-item-main">
-                    <i className="plc-alert-dot" aria-hidden />
-                    <span className="plc-alert-texts">
-                      <strong>{alarm.label}</strong>
-                      <small>{alarm.key}</small>
-                    </span>
-                  </span>
-                  <em>{alarm.level === 'critical' ? '치명' : alarm.level === 'warning' ? '주의' : '안내'}</em>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>}
 
@@ -947,10 +935,10 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
       {activeTab === 'counter' && (
         <section className="plc-subview">
           <div className="plc-sub-grid plc-sub-grid-4">
-            <article className="plc-sub-card"><h3>총 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.total, 0)}</p></article>
-            <article className="plc-sub-card"><h3>계획 생산량</h3><p className="plc-sub-emphasis">{formatMetric(counterData.plan, 0)}</p></article>
-            <article className="plc-sub-card"><h3>현재 생산량</h3><p className="plc-sub-emphasis">{formatMetric(counterData.current, 0)}</p></article>
-            <article className="plc-sub-card"><h3>일 목표량</h3><p className="plc-sub-emphasis">{formatMetric(counterData.preset, 0)}</p></article>
+            <article className="plc-sub-card"><h3>총 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.totalStroke, 0)}</p></article>
+            <article className="plc-sub-card"><h3>목표 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.targetStroke, 0)}</p></article>
+            <article className="plc-sub-card"><h3>현재 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.currentStroke, 0)}</p></article>
+            <article className="plc-sub-card"><h3>과부족 수량</h3><p className="plc-sub-emphasis">{formatMetric(counterData.shortageQuantity, 0)}</p></article>
           </div>
           <article className="plc-sub-card">
             <h3>생산 진척</h3>
@@ -959,7 +947,7 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList, apiUrl }) {
             </div>
             <div className="plc-sub-meta">
               <span>진행률 {productionRate.toFixed(1)}%</span>
-              <span>과부족 {formatMetric(counterData.deficiency, 0)} ea</span>
+              <span>과부족 {formatMetric(counterData.shortageQuantity, 0)} ea</span>
             </div>
           </article>
         </section>
