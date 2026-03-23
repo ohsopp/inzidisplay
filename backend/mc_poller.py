@@ -63,7 +63,7 @@ def _poll_chunk(host, port, chunk):
 
 def _bootstrap_sequential_load(host, port, all_entries, on_parsed, on_error):
     """
-    전체 엔트리를 한 번의 연결로 순차 읽기. on_parsed(merged, None) — ndjson/주기 태그 없음.
+    전체 엔트리를 한 번의 연결로 순차 읽기. on_parsed(merged, None) — Parquet 로그/주기 태그 없음.
     성공 시 True (전부 '-'면 False).
     """
     if not all_entries:

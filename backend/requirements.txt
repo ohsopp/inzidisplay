@@ -5,3 +5,4 @@ pymcprotocol==0.3.0
 influxdb-client>=1.38.0
 psycopg[binary]
 gunicorn>=21.0.0
+pyarrow>=14.0.0

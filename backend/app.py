@@ -222,10 +222,10 @@ def _mc_on_parsed(parsed, interval_key=None):
             print("[InfluxDB] 기록 오류:", e, flush=True)
         if interval_key:
             try:
-                from poll_ndjson_logger import append_parsed_to_ndjson
-                append_parsed_to_ndjson(parsed, interval_key, ts)
+                from poll_parquet_logger import append_parsed_to_parquet
+                append_parsed_to_parquet(parsed, interval_key, ts)
             except Exception as e:
-                print("[PollNDJSON] 기록 오류:", e, flush=True)
+                print("[PollParquet] 기록 오류:", e, flush=True)
     _influx_write_executor.submit(_write)
 
 
