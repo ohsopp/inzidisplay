@@ -5,9 +5,9 @@ import SensorTrendCharts from './components/SensorTrendCharts'
 import McEditModal from './components/McEditModal'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
-// 배포: same-origin(/api)로 붙이고, 실제 업스트림은 Vercel rewrite에서 고정한다.
-const PRODUCTION_API_URL = '/api'
-// 개발: 로컬 백엔드(6005). 배포: same-origin(/api)
+// 배포: same-origin으로 호출하고, 경로는 각 호출부의 /api/...를 그대로 사용한다.
+const PRODUCTION_API_URL = ''
+// 개발: 로컬 백엔드(6005). 배포: same-origin
 const API_URL = import.meta.env.DEV ? `http://${window.location.hostname}:6005` : PRODUCTION_API_URL
 const SENSOR_TREND_MAX_POINTS = 240
 
