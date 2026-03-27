@@ -5,9 +5,9 @@ import SensorTrendCharts from './components/SensorTrendCharts'
 import McEditModal from './components/McEditModal'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
-// 배포: 백엔드 고정 주소로 직접 호출
-const PRODUCTION_API_URL = 'https://uitsolutions.duckdns.org'
-// 개발: 로컬 백엔드(6005). 배포: 고정 백엔드 주소
+// 배포: same-origin(/api)로 붙이고, 실제 업스트림은 Vercel rewrite에서 고정한다.
+const PRODUCTION_API_URL = '/api'
+// 개발: 로컬 백엔드(6005). 배포: same-origin(/api)
 const API_URL = import.meta.env.DEV ? `http://${window.location.hostname}:6005` : PRODUCTION_API_URL
 const SENSOR_TREND_MAX_POINTS = 240
 
