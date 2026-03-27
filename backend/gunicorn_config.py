@@ -20,8 +20,8 @@ wsgi_app = "app:app"
 # 필요 시 Redis/pubsub 등 외부 상태 저장소로 전환 후 멀티워커 확장 권장.
 workers = int(os.environ.get("GUNICORN_WORKERS", 1))
 # SSE 연결(/api/events)은 연결당 스레드 1개를 장시간 점유하므로 여유 스레드가 필수.
-# 기본 16으로 두고 동시 사용자 수에 맞춰 환경변수로 조정한다.
-threads = int(os.environ.get("GUNICORN_THREADS", 16))
+# 기본 64로 상향해 스레드 고갈(health/API 타임아웃) 가능성을 줄인다.
+threads = int(os.environ.get("GUNICORN_THREADS", 64))
 worker_class = "gthread"
 timeout = int(os.environ.get("GUNICORN_TIMEOUT", 120))
 keepalive = 5
