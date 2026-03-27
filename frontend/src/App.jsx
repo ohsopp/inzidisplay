@@ -6,7 +6,7 @@ import McEditModal from './components/McEditModal'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
 // 배포: 백엔드 고정 주소로 직접 호출
-const PRODUCTION_API_URL = 'https://uitsolutions.iptime.org'
+const PRODUCTION_API_URL = 'https://uitsolutions.duckdns.org'
 // 개발: 로컬 백엔드(6005). 배포: 고정 백엔드 주소
 const API_URL = import.meta.env.DEV ? `http://${window.location.hostname}:6005` : PRODUCTION_API_URL
 const SENSOR_TREND_MAX_POINTS = 240
