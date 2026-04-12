@@ -69,7 +69,7 @@ sudo systemctl reload nginx
 ```
 
 - **Gunicorn 포트**: 기본 8000. 변경했다면 Nginx의 `proxy_pass http://127.0.0.1:8000` 도 함께 수정.
-- **HTTPS / Vercel 우회**: 공인 인증서 없이 쓰려면 `vercel.json`의 rewrite를 `http://도메인:6006/api/...`처럼 **HTTP 6006**으로 두면 됩니다(Vercel→집 구간은 평문). 나중에 Let’s Encrypt로 443만 정리해도 됨.
+- **Vercel 502 (`ROUTER_EXTERNAL_TARGET_CONNECTION_ERROR`)**: Vercel 엣지가 집 서버에 TCP로 못 붙을 때 납니다. `vercel.json` rewrite만으로는 한계가 있을 수 있어, Vercel 프로젝트 환경변수 **`VITE_API_URL`** 에 브라우저가 직접 붙을 **HTTPS 백엔드 베이스**(예: Let’s Encrypt 적용한 `https://uitsolutions.iptime.org:444` 또는 Cloudflare Tunnel URL)를 넣고 재빌드하면 API/SSE가 Vercel 프록시를 거치지 않습니다. CORS는 백엔드 `app.py`에서 이미 허용되어 있습니다.
 
 ---
 

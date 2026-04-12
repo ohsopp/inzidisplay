@@ -6,9 +6,11 @@ import McEditModal from './components/McEditModal'
 import McProtocolCardView from './components/McProtocolCardView'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
-// 배포: same-origin으로 호출하고, 경로는 각 호출부의 /api/...를 그대로 사용한다.
-const PRODUCTION_API_URL = ''
-// 개발: 로컬 백엔드(6005). 배포: same-origin
+// 프로덕션: VITE_API_URL 비우면 same-origin(/api/...) → vercel.json rewrite. Vercel이 집 서버에 못 붙으면(502 ROUTER_EXTERNAL_TARGET_…)
+// Vercel 환경변수에 VITE_API_URL=https://백엔드공개주소 만 넣으면 브라우저가 직접 호출해 프록시를 우회한다. HTTPS 페이지라 백엔드도 https 필요.
+const PRODUCTION_API_URL = String(import.meta.env.VITE_API_URL || '')
+  .trim()
+  .replace(/\/$/, '')
 const API_URL = import.meta.env.DEV ? `http://${window.location.hostname}:6005` : PRODUCTION_API_URL
 const SENSOR_TREND_MAX_POINTS = 240
 
