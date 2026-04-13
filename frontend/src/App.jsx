@@ -6,8 +6,9 @@ import McEditModal from './components/McEditModal'
 import McProtocolCardView from './components/McProtocolCardView'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
-// 배포 기본: same-origin + vercel.json 이 /api/* 를 원격 Gunicorn(예: inzi.duckdns.org:6005)으로 프록시.
-// Vercel 환경변수 VITE_API_BASE_URL 로 직접 백엔드 URL을 쓰는 경우에만 HTTPS(예: :6006) 필요.
+// 배포 기본: same-origin + vercel.json 이 /api/* 를 원격 Gunicorn으로 프록시.
+// Vercel 엣지에서 DNS/연결이 안정적인 호스트를 쓰는 것이 중요(예: iptime DDNS). DuckDNS만 LE에서 SERVFAIL 난 적이 있으면 rewrite 목적지로는 iptime 유지 권장.
+// VITE_API_BASE_URL 로 브라우저가 백엔드에 직접 붙이면 HTTPS(예: :6006) 필요(혼합 콘텐츠 방지).
 const PRODUCTION_API_URL = String(import.meta.env.VITE_API_BASE_URL || '')
   .trim()
   .replace(/\/$/, '')
