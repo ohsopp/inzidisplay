@@ -1,6 +1,6 @@
 """
 폴링 스레드별·날짜별 Parquet 수집 (NDJSON 대체).
-경로: {POLL_LOGS_DIR}/{thread_name}/{YYYYMMDD}.parquet
+경로: {POLL_LOGS_DIR}/{thread_name}/{YYYYMMDD}.parquet (YYYYMMDD는 KST)
 
 스키마: t_kst (KST ISO 문자열), interval_key, data_json (변수 맵 JSON 문자열)
 NDJSON과 동일한 정보를 보존하며, 행 단위 append 대신 버퍼 후 배치 플러시.
@@ -188,13 +188,15 @@ def append_parsed_to_parquet(parsed: dict, interval_key: str, timestamp: float) 
     if not parsed or not interval_key:
         return
     base = _get_base_dir()
-    date_str = datetime.fromtimestamp(timestamp).strftime("%Y%m%d")
+    # 파일명 날짜는 t_kst와 동일하게 KST 기준 (서버 TZ가 UTC여도 4/15 KST → 20260415.parquet)
+    dt_utc = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+    dt_kst = dt_utc.astimezone(KST)
+    date_str = dt_kst.strftime("%Y%m%d")
     thread_folder = _resolve_thread_folder(interval_key)
     key = (thread_folder, date_str)
 
     data = {k: _serialize_value(v) for k, v in parsed.items()}
-    dt_utc = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-    t_kst = dt_utc.astimezone(KST).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "+09:00"
+    t_kst = dt_kst.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "+09:00"
     row = {
         "t_kst": t_kst,
         "interval_key": str(interval_key),

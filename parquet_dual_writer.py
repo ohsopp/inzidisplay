@@ -82,9 +82,11 @@ def _row_for_point(
     if timestamp_ns is None:
         timestamp_ns = time.time_ns()
     dt_utc = datetime.fromtimestamp(timestamp_ns / 1_000_000_000, tz=timezone.utc)
-    date_str = dt_utc.strftime("%Y%m%d")
+    dt_kst = dt_utc.astimezone(KST)
+    # 파일명은 t_kst 날짜와 맞춤 (UTC 날짜면 KST 자정 전후에 하루 어긋남)
+    date_str = dt_kst.strftime("%Y%m%d")
     t_utc = dt_utc.isoformat()
-    t_kst = dt_utc.astimezone(KST).isoformat()
+    t_kst = dt_kst.isoformat()
     interval_norm = _normalize_name(interval_key) if interval_key else "_default"
     key = (_normalize_name(bucket), interval_norm, _normalize_name(measurement), date_str)
     row = {
