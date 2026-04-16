@@ -849,14 +849,50 @@
   "D1820": {
     "dataType": "Dword",
     "length": 1,
-    "value": 1845632,
-    "name": "totalCounter_D1820"
+    "value": 12840,
+    "name": "todayStrokeCount_D1820"
   },
   "D1821": {
     "dataType": "Dword",
     "length": 1,
-    "value": 1845632,
-    "name": "totalCounter_D1821"
+    "value": 12840,
+    "name": "todayStrokeCount_D1821"
+  },
+  "D1054": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 47,
+    "name": "todayRunningTimeSec_D1054"
+  },
+  "D1055": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 47,
+    "name": "todayRunningTimeSec_D1055"
+  },
+  "D1056": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 5,
+    "name": "todayRunningTimeHour_D1056"
+  },
+  "D1057": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 5,
+    "name": "todayRunningTimeHour_D1057"
+  },
+  "D1058": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 23,
+    "name": "todayRunningTimeMin_D1058"
+  },
+  "D1059": {
+    "dataType": "Dword",
+    "length": 1,
+    "value": 23,
+    "name": "todayRunningTimeMin_D1059"
   },
   "D1810": {
     "dataType": "Dword",
@@ -917,23 +953,5 @@
     "length": 1,
     "value": 193420,
     "name": "production_D1819"
-  },
-  "D1912": {
-    "dataType": "Dword",
-    "length": 1,
-    "value": 12840,
-    "name": "todayStrokeCount_D1912"
-  },
-  "D1913": {
-    "dataType": "Dword",
-    "length": 1,
-    "value": 12840,
-    "name": "todayStrokeCount_D1913"
-  },
-  "D1914": {
-    "dataType": "Word",
-    "length": 1,
-    "value": 388,
-    "name": "todayRunningTime_D1914"
   }
 }

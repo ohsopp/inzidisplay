@@ -118,6 +118,10 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.plc-sub-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .plc-sub-card {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.02);
@@ -139,6 +143,14 @@
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.plc-sub-addr {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.88;
 }
 
 .plc-sub-meta {
@@ -1556,6 +1568,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .plc-sub-grid-3,
   .plc-sub-grid-4,
   .plc-io-stats-grid {
     grid-template-columns: 1fr 1fr;
@@ -1597,6 +1610,7 @@
   }
 
   .plc-sub-grid-2,
+  .plc-sub-grid-3,
   .plc-sub-grid-4,
   .plc-io-stats-grid {
     grid-template-columns: 1fr;

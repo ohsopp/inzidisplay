@@ -845,17 +845,53 @@
     "scale": "1",
     "description": "크라운 우측 1 분당 오일 공급량을 표시 (순차분배변 블록에서 오일 공급시 센싱) (동작시 1분당 50Count 미달시 알람)"
   },
-  "totalCounter_D1820": {
+  "todayStrokeCount_D1820": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "프레스의 총 타발수"
+    "description": "금일 기준 슬라이드 행정 수 (BCD TYPE)"
   },
-  "totalCounter_D1821": {
+  "todayStrokeCount_D1821": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "프레스의 총 타발수"
+    "description": "금일 기준 슬라이드 행정 수 (BCD TYPE)"
+  },
+  "todayRunningTimeSec_D1054": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 초 (BCD TYPE)"
+  },
+  "todayRunningTimeSec_D1055": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 초 (BCD TYPE)"
+  },
+  "todayRunningTimeHour_D1056": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 시 (BCD TYPE)"
+  },
+  "todayRunningTimeHour_D1057": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 시 (BCD TYPE)"
+  },
+  "todayRunningTimeMin_D1058": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 분 (BCD TYPE)"
+  },
+  "todayRunningTimeMin_D1059": {
+    "length": 16,
+    "dataType": "Dword",
+    "scale": "1",
+    "description": "금일 가동시간 — 분 (BCD TYPE)"
   },
   "productionCounter_D1810": {
     "length": 16,
@@ -916,23 +952,5 @@
     "dataType": "Dword",
     "scale": "1",
     "description": ""
-  },
-  "todayStrokeCount_D1912": {
-    "length": 16,
-    "dataType": "Dword",
-    "scale": "1",
-    "description": "금일 기준 슬라이드 행정 수를 표시 (BCD TYPE)"
-  },
-  "todayStrokeCount_D1913": {
-    "length": 16,
-    "dataType": "Dword",
-    "scale": "1",
-    "description": "금일 기준 슬라이드 행정 수를 표시 (BCD TYPE)"
-  },
-  "todayRunningTime_D1914": {
-    "length": 16,
-    "dataType": "Word",
-    "scale": "1",
-    "description": "금일 기준 모터 기동 시간을 표시 (BCD TYPE)"
   }
 }

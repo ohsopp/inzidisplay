@@ -68,12 +68,36 @@ def _refresh_meta() -> tuple[list[str], set[str], set[str], pa.Schema]:
     return col_order, set(names_50), set(names_1s), schema
 
 
+def _mc_fake_values_mtime() -> float | None:
+    """mc_fake_values.json 변경 시 Parquet 컬럼 스키마를 다시 잡기 위한 mtime."""
+    from mc_mapping import MC_FAKE_VALUES_PATH
+
+    try:
+        if not MC_FAKE_VALUES_PATH.exists():
+            return None
+        return MC_FAKE_VALUES_PATH.stat().st_mtime
+    except OSError:
+        return None
+
+
 def _ensure_meta() -> tuple[list[str], set[str], set[str], pa.Schema]:
     global _meta_cache
+    mtime = _mc_fake_values_mtime()
     with _LOCK:
-        if _meta_cache is None:
-            c50, s50, s1s, schema = _refresh_meta()
-            _meta_cache = {"col_order": c50, "set_50": s50, "set_1s": s1s, "schema": schema}
+        if (
+            _meta_cache is not None
+            and _meta_cache.get("file_mtime") == mtime
+        ):
+            m = _meta_cache
+            return m["col_order"], m["set_50"], m["set_1s"], m["schema"]
+        c50, s50, s1s, schema = _refresh_meta()
+        _meta_cache = {
+            "col_order": c50,
+            "set_50": s50,
+            "set_1s": s1s,
+            "schema": schema,
+            "file_mtime": mtime,
+        }
         m = _meta_cache
         return m["col_order"], m["set_50"], m["set_1s"], m["schema"]
 

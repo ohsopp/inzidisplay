@@ -162,7 +162,7 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
     const dieHeight = getMetricByCandidates(['currentDieHeight_D711', 'nextDieHeight_D511'])
     const currentProduction = getMetricByCandidates(['currentProduction_D1812', 'production_D1818', 'production_D1819'])
     const balanceAir = getMetricByCandidates(['currentBalanceAirPressure_D713', 'nextBalanceAirPressure_D513'])
-    const counterQty = getMetricByCandidates(['totalCounter_D1820', 'todayStrokeCount_D1912'])
+    const counterQty = getMetricByCandidates(['todayStrokeCount_D1820', 'todayStrokeCount_D1821'])
     const targetProduction = getMetricByCandidates(['productionCounter_D1810', 'presetCounter_D1816'])
     const pressAngle = getMetricByCandidates(['pressAngle_D100'])
     const spm = getMetricByCandidates(['strokePerMinute_D126', 'cPMCyclePerMinute_D104'])
@@ -438,10 +438,13 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
   const nextMoldPreview = moldCatalog[(moldIndex + 1) % moldCatalog.length] || selectedMold
 
   const counterData = useMemo(() => ({
-    totalStroke: getMetricByCandidates(['totalCounter_D1820']),
+    todayStroke: getMetricByCandidates(['todayStrokeCount_D1820', 'todayStrokeCount_D1821']),
     targetStroke: getMetricByCandidates(['productionCounter_D1810']),
     currentStroke: getMetricByCandidates(['currentProduction_D1812', 'production_D1818']),
     shortageQuantity: getMetricByCandidates(['defficiencyQuantity_D1814']),
+    todayRunningHour: getMetricByCandidates(['todayRunningTimeHour_D1056', 'todayRunningTimeHour_D1057']),
+    todayRunningMin: getMetricByCandidates(['todayRunningTimeMin_D1058', 'todayRunningTimeMin_D1059']),
+    todayRunningSec: getMetricByCandidates(['todayRunningTimeSec_D1054', 'todayRunningTimeSec_D1055']),
   }), [mcValues, infoByName])
 
   const moldViewData = useMemo(() => {
@@ -601,7 +604,7 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
             </article>
             <article className="plc-kpi-card kpi-counter">
               <div className="plc-kpi-head">
-                <span className="plc-kpi-label">카운터 수량</span>
+                <span className="plc-kpi-label">금일 타발수</span>
                 <small>D1820</small>
               </div>
               <strong className="plc-kpi-value">{formatMetric(plcMetrics.counterQty, 0)}</strong>
@@ -803,10 +806,15 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
       {activeTab === 'counter' && (
         <section className="plc-subview">
           <div className="plc-sub-grid plc-sub-grid-4">
-            <article className="plc-sub-card"><h3>총 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.totalStroke, 0)}</p></article>
+            <article className="plc-sub-card"><h3>금일 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.todayStroke, 0)}</p><small className="plc-sub-addr">D1820–D1821</small></article>
             <article className="plc-sub-card"><h3>목표 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.targetStroke, 0)}</p></article>
             <article className="plc-sub-card"><h3>현재 타발수</h3><p className="plc-sub-emphasis">{formatMetric(counterData.currentStroke, 0)}</p></article>
             <article className="plc-sub-card"><h3>과부족 수량</h3><p className="plc-sub-emphasis">{formatMetric(counterData.shortageQuantity, 0)}</p></article>
+          </div>
+          <div className="plc-sub-grid plc-sub-grid-3">
+            <article className="plc-sub-card"><h3>금일 가동시간 (시)</h3><p className="plc-sub-emphasis">{formatMetric(counterData.todayRunningHour, 0)}</p><small className="plc-sub-addr">D1056–D1057</small></article>
+            <article className="plc-sub-card"><h3>금일 가동시간 (분)</h3><p className="plc-sub-emphasis">{formatMetric(counterData.todayRunningMin, 0)}</p><small className="plc-sub-addr">D1058–D1059</small></article>
+            <article className="plc-sub-card"><h3>금일 가동시간 (초)</h3><p className="plc-sub-emphasis">{formatMetric(counterData.todayRunningSec, 0)}</p><small className="plc-sub-addr">D1054–D1055</small></article>
           </div>
           <article className="plc-sub-card">
             <h3>생산 진척</h3>

@@ -146,5 +146,11 @@ def apply_updates(updates):
 
         if applied:
             _save_values_unlocked(data)
+            try:
+                from plc_wide_parquet_writer import invalidate_meta_cache
+
+                invalidate_meta_cache()
+            except Exception:
+                pass
 
     return applied, errors
