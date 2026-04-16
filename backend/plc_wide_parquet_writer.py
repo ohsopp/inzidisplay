@@ -31,8 +31,6 @@ _FLUSH_SEC = float(os.environ.get("PLC_WIDE_PARQUET_FLUSH_SEC", "2.0") or "2.0")
 _COMPRESSION = (os.environ.get("PLC_WIDE_PARQUET_COMPRESSION", "snappy") or "snappy").strip().lower()
 
 _LOCK = threading.RLock()
-_state_50ms: dict[str, Any] = {}
-_state_1s: dict[str, Any] = {}
 _buffers: dict[str, list[dict[str, Any]]] = {}
 _buffer_first_mono: dict[str, float] = {}
 _meta_cache: dict[str, Any] | None = None
@@ -282,26 +280,10 @@ def _flush_all_buffers() -> None:
 
 def seed_plc_wide_from_bootstrap(parsed: dict[str, Any]) -> None:
     """
-    MC 연결 직후 전체 변수 순차 로드(부트스트랩) 직후에만 호출.
-    50ms/1s 내부 스냅샷을 한 번에 채워, 이후 첫 주기 Parquet 행에서 상대 그룹 컬럼이 공란이 되지 않게 한다.
+    호환성 유지를 위한 no-op.
+    현재는 보간/전방 패딩을 하지 않고, 실제 폴링에서 들어온 값만 행에 기록한다.
     """
-    if not is_parquet_write_enabled():
-        return
-    if not parsed:
-        return
-    _, set_50, set_1s, _ = _ensure_meta()
-    with _LOCK:
-        for k, v in parsed.items():
-            if k in set_50:
-                nv = _norm_incoming(v)
-                if nv is None:
-                    continue
-                _state_50ms[k] = v
-            elif k in set_1s:
-                nv = _norm_incoming(v)
-                if nv is None:
-                    continue
-                _state_1s[k] = v
+    return
 
 
 def append_plc_wide_row(parsed: dict[str, Any], interval_key: str, timestamp: float) -> None:
@@ -314,7 +296,7 @@ def append_plc_wide_row(parsed: dict[str, Any], interval_key: str, timestamp: fl
     if not parsed or interval_key not in ("50ms", "1s"):
         return
 
-    col_order, set_50, set_1s, schema = _ensure_meta()
+    col_order, _, _, schema = _ensure_meta()
     string_names = {
         f.name
         for f in schema
@@ -328,32 +310,15 @@ def append_plc_wide_row(parsed: dict[str, Any], interval_key: str, timestamp: fl
 
     now = time.monotonic()
     with _LOCK:
-        if interval_key == "50ms":
-            for k, v in parsed.items():
-                if k not in set_50:
-                    continue
-                nv = _norm_incoming(v)
-                if nv is None:
-                    continue
-                _state_50ms[k] = v
-        else:
-            for k, v in parsed.items():
-                if k not in set_1s:
-                    continue
-                nv = _norm_incoming(v)
-                if nv is None:
-                    continue
-                _state_1s[k] = v
-
         row: dict[str, Any] = {
             "t_kst": t_kst,
             "poll_interval": interval_key,
         }
+        current_values: dict[str, Any] = {}
+        for k, v in parsed.items():
+            current_values[k] = _norm_incoming(v)
         for name in col_order:
-            if name in set_50:
-                raw = _state_50ms.get(name)
-            else:
-                raw = _state_1s.get(name)
+            raw = current_values.get(name)
             row[name] = _cell_value(name, raw, string_names)
 
         if date_str not in _buffers:
