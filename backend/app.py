@@ -33,7 +33,7 @@ mc_thread = None
 mc_stop_event = None
 mc_state = None  # {"host": str, "port": int} when connected (slave 없음)
 mc_fake_server_proc = None
-# InfluxDB 전용 MC 폴러 (M 1초/값1만, D 50ms·일부 1시간, Y 1초)
+# InfluxDB 전용 MC 폴러 (50ms / 1s 두 그룹)
 mc_influx_stop_event = None
 # 폴링 스레드별 수신 데이터를 블로킹 없이 즉시 InfluxDB에 저장하기 위한 전용 스레드 풀
 _influx_write_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="influx_write")
@@ -215,7 +215,7 @@ def health():
 def _mc_on_parsed(parsed, interval_key=None):
     broadcast("mc_data", {"parsed": parsed})
     # interval_key가 없는 호출은 부트스트랩 1회 로드로 간주.
-    # 저장은 주기 스레드(50ms/1s/1min/1h)에서만 수행해
+    # 저장은 주기 스레드(50ms/1s)에서만 수행해
     # "폴링레이트 = 저장주기"를 보장한다.
     if not interval_key:
         return
@@ -226,11 +226,6 @@ def _mc_on_parsed(parsed, interval_key=None):
             write_parsed_to_influx(parsed, timestamp=ts, interval_key=interval_key)
         except Exception as e:
             print("[InfluxDB] 기록 오류:", e, flush=True)
-        try:
-            from poll_parquet_logger import append_parsed_to_parquet
-            append_parsed_to_parquet(parsed, interval_key, ts)
-        except Exception as e:
-            print("[PollParquet] 기록 오류:", e, flush=True)
     _influx_write_executor.submit(_write)
 
 
@@ -323,7 +318,7 @@ def mc_poll_rates():
     intervals = get_poll_intervals()
     grouped = get_poll_thread_entries()
     threads = []
-    for key in ("50ms", "1s", "1min", "1h"):
+    for key in ("50ms", "1s"):
         entries = grouped.get(key, [])
         threads.append({
             "key": key,
@@ -346,7 +341,7 @@ def mc_poll_rates_update():
         data = request.get_json(silent=True) or {}
         intervals_ms = data.get("intervals_ms") or {}
         interval_map_sec = {}
-        for key in ("50ms", "1s", "1min", "1h"):
+        for key in ("50ms", "1s"):
             if key not in intervals_ms:
                 continue
             interval_map_sec[key] = float(intervals_ms[key]) / 1000.0
@@ -462,7 +457,7 @@ def parquet_status():
 
 @app.route("/api/influxdb/export-csv", methods=["GET", "POST", "OPTIONS"])
 def influxdb_export_csv():
-    """지정 기간·폴링 그룹(50ms|1s|1min|1h)별 피벗 CSV 반환. 행=변수, 열=타임스탬프."""
+    """지정 기간·폴링 그룹(50ms|1s)별 피벗 CSV 반환. 행=변수, 열=타임스탬프."""
     if request.method == "OPTIONS":
         return "", 204
     try:
@@ -479,8 +474,8 @@ def influxdb_export_csv():
         return {"error": str(e)}, 400
     if not start_iso or not end_iso:
         return {"error": "시작 시간(start)과 종료 시간(end)을 입력하세요."}, 400
-    if group not in ("50ms", "1s", "1min", "1h"):
-        return {"error": "폴링 그룹(group)을 선택하세요. (50ms, 1s, 1min, 1h)"}, 400
+    if group not in ("50ms", "1s"):
+        return {"error": "폴링 그룹(group)을 선택하세요. (50ms, 1s)"}, 400
     try:
         from influxdb_writer import export_plc_csv_pivot
         csv_str, err = export_plc_csv_pivot(start_iso, end_iso, group)

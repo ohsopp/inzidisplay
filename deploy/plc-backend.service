@@ -20,7 +20,7 @@ Environment=PGPORT=5432
 Environment=PGDATABASE=plc_test
 Environment=PGUSER=plc_app
 Environment=PGPASSWORD=CHANGE_ME
-Environment=INFLUX_URL=http://127.0.0.1:8086
+Environment=INFLUX_URL=http://127.0.0.1:8090
 Environment=INFLUX_TOKEN=CHANGE_ME
 Environment=INFLUX_ORG=plc
 Environment=INFLUX_BUCKET=plc_data

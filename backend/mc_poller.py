@@ -1,7 +1,7 @@
 """
 MC 프로토콜(3E) 폴링. 웹 대시보드에서 폴링 시작 시 host:port(가짜/실제 PLC)에 3E 요청을 보내
 수신값을 대시보드·InfluxDB에 전달합니다.
-주기별 4개 스레드: 50ms / 1s / 1min / 1h. 같은 주기 내에서는 100개씩 청크·2스레드 병렬 읽기.
+주기별 스레드: 50ms / 1s (1min·1h 그룹은 비사용). 같은 주기 내에서는 100개씩 청크·2스레드 병렬 읽기.
 
 연결 직후: 전체 변수를 단일 TCP 세션·순차 읽기로 1회 스냅샷(MC_BOOTSTRAP_SEQUENTIAL_LOAD, 기본 on).
 이후 주기 폴링은 각 스레드가 담당하며, 부트스트랩이 성공하면 첫 주기 폴링은 생략한다.
@@ -39,8 +39,6 @@ _plc_io_lock = threading.Lock()
 
 INTERVAL_50MS = 0.05
 INTERVAL_1S = 1.0
-INTERVAL_1MIN = 60.0
-INTERVAL_1H = 3600.0
 MIN_INTERVAL_SEC = 0.05
 MAX_INTERVAL_SEC = 12 * 3600.0
 
@@ -48,8 +46,6 @@ _interval_lock = threading.Lock()
 _interval_by_key = {
     "50ms": INTERVAL_50MS,
     "1s": INTERVAL_1S,
-    "1min": INTERVAL_1MIN,
-    "1h": INTERVAL_1H,
 }
 
 
@@ -63,22 +59,22 @@ def _poll_chunk(host, port, chunk):
 
 def _bootstrap_sequential_load(host, port, all_entries, on_parsed, on_error):
     """
-    전체 엔트리를 한 번의 연결로 순차 읽기. on_parsed(merged, None) — Parquet 로그/주기 태그 없음.
-    성공 시 True (전부 '-'면 False).
+    전체 엔트리를 한 번의 연결로 순차 읽기. on_parsed(merged, None) — 주기 태그 없음(Influx/브로드캐스트만).
+    반환: (성공 여부, merged 또는 None). 성공 시 merged로 plc_wide 시드 등에 사용.
     """
     if not all_entries:
-        return False
+        return False, None
     try:
         merged = _poll_chunk(host, port, all_entries)
         if not merged:
-            return False
+            return False, None
         if all(v == "-" for v in merged.values()):
-            return False
+            return False, None
         on_parsed(merged, None)
-        return True
+        return True, merged
     except Exception as e:
         on_error(str(e))
-        return False
+        return False, None
 
 
 def _do_poll_entries(host, port, entries, on_parsed, on_error, interval_key=None):
@@ -114,7 +110,7 @@ def normalize_poll_intervals(interval_map_sec):
     """
     입력값 검증/정규화 후 {key: sec(float)} 반환. (메모리 변경 없음)
     """
-    valid_keys = ("50ms", "1s", "1min", "1h")
+    valid_keys = ("50ms", "1s")
     normalized = {}
     for key in valid_keys:
         if key not in interval_map_sec:
@@ -128,7 +124,7 @@ def normalize_poll_intervals(interval_map_sec):
 
 def set_poll_intervals(interval_map_sec):
     """
-    interval_map_sec: {"50ms": sec, "1s": sec, "1min": sec, "1h": sec}
+    interval_map_sec: {"50ms": sec, "1s": sec}
     """
     normalized = normalize_poll_intervals(interval_map_sec)
     with _interval_lock:
@@ -142,14 +138,12 @@ def get_poll_intervals():
 
 
 def get_poll_thread_entries():
-    e_50ms, e_1s, e_1min, e_1h = get_mc_entries_by_poll_interval()
+    e_50ms, e_1s = get_mc_entries_by_poll_interval()
     if POLL_ENTRY_LIMIT > 0 and len(e_50ms) > POLL_ENTRY_LIMIT:
         e_50ms = e_50ms[:POLL_ENTRY_LIMIT]
     return {
         "50ms": e_50ms,
         "1s": e_1s,
-        "1min": e_1min,
-        "1h": e_1h,
     }
 
 
@@ -171,7 +165,7 @@ def _run_interval_loop(host, port, entries, interval_key, on_parsed, on_error, s
         last_polled_at = time.monotonic()
     while not stop_event.is_set():
         # 고정 wait(interval_sec)을 쓰면 긴 주기 대기 중 주기 변경이 즉시 반영되지 않는다.
-        # 짧은 tick으로 남은 시간을 재계산해, 1h -> 1s 변경도 빠르게 반영한다.
+        # 짧은 tick으로 남은 시간을 재계산해, 긴 주기 -> 짧은 주기 변경도 빠르게 반영한다.
         while not stop_event.is_set():
             interval_sec = get_interval_seconds(interval_key) or MIN_INTERVAL_SEC
             retry_sec = max(MIN_INTERVAL_SEC, min(FAILED_POLL_RETRY_SEC, interval_sec))
@@ -195,42 +189,43 @@ def _run_interval_loop(host, port, entries, interval_key, on_parsed, on_error, s
 
 def run_poller(host, port, on_parsed, on_error, stop_event):
     """
-    주기별 4스레드로 폴링 실행.
-    - 50ms: 나머지 전부 (온도·압력·각종 Word/Dword 등)
-    - 1s: Boolean 전체 + 토탈카운터, 현재생산량, 과부족수량, 카운트수량, 금일가동수량, 금일 가동시간
-    - 1min: C.P.M, S.P.M
-    - 1h: 현재/다음 금형번호·금형이름·다이하이트·바란스에어, 생산계획량, 목표 타발수
+    주기별 스레드로 폴링 실행.
+    - 50ms: boolean·string이 아닌 항목(word, dword 등)
+    - 1s: boolean·string 항목 전부
     """
     grouped = get_poll_thread_entries()
     e_50ms = grouped["50ms"]
     e_1s = grouped["1s"]
-    e_1min = grouped["1min"]
-    e_1h = grouped["1h"]
-    total = len(e_50ms) + len(e_1s) + len(e_1min) + len(e_1h)
+    total = len(e_50ms) + len(e_1s)
     if total == 0:
         print("[MC] mc_fake_values.json 항목 없음", flush=True)
         return
-    print("[MC] 폴링 시작 (총 %d개) 50ms=%d, 1s=%d, 1min=%d, 1h=%d"
-          % (total, len(e_50ms), len(e_1s), len(e_1min), len(e_1h)), flush=True)
+    print("[MC] 폴링 시작 (총 %d개) 50ms=%d, 1s=%d"
+          % (total, len(e_50ms), len(e_1s)), flush=True)
 
-    all_ordered = e_50ms + e_1s + e_1min + e_1h
+    all_ordered = e_50ms + e_1s
     skip_initial_after_bootstrap = False
     if BOOTSTRAP_SEQUENTIAL_LOAD and all_ordered:
         t_boot = time.perf_counter()
-        boot_ok = _bootstrap_sequential_load(host, port, all_ordered, on_parsed, on_error)
+        boot_ok, boot_merged = _bootstrap_sequential_load(host, port, all_ordered, on_parsed, on_error)
         skip_initial_after_bootstrap = boot_ok
         print(
             "[MC] 초기 순차 로드 %s (%.2fs, %d개)"
             % ("완료" if boot_ok else "실패·미전송(주기 폴링에서 재시도)", time.perf_counter() - t_boot, len(all_ordered)),
             flush=True,
         )
+        if boot_ok and boot_merged:
+            try:
+                from plc_wide_parquet_writer import seed_plc_wide_from_bootstrap
+
+                seed_plc_wide_from_bootstrap(boot_merged)
+            except Exception as e:
+                print("[PLC Wide Parquet] 부트스트랩 시드 실패:", e, flush=True)
 
     threads = []
     for entries, interval_key, label in [
         (e_50ms, "50ms", "50ms"),
         (e_1s, "1s", "1s"),
-        (e_1min, "1min", "1min"),
-        (e_1h, "1h", "1h"),
     ]:
         if not entries:
             continue

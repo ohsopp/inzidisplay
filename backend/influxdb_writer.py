@@ -6,15 +6,6 @@ tag: variable=이름, field: value 또는 value_str
 from datetime import datetime, timezone
 
 from influxdb_config import INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET, is_configured
-try:
-    from parquet_dual_writer import append_point_to_parquet
-except ImportError:
-    import os
-    import sys
-    _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if _ROOT_DIR not in sys.path:
-        sys.path.insert(0, _ROOT_DIR)
-    from parquet_dual_writer import append_point_to_parquet
 
 _client = None
 _write_api = None
@@ -82,16 +73,8 @@ def write_plc_point(variable: str, value, device_type: str = "", measurement: st
             p = p.field("value_str", str(value))
             fields = {"value_str": str(value)}
         api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=p)
-        tags = {"variable": variable}
-        if device_type:
-            tags["device"] = device_type
-        append_point_to_parquet(
-            bucket=INFLUX_BUCKET,
-            measurement=measurement,
-            tags=tags,
-            fields=fields,
-            source="plc_writer_point",
-        )
+        # Parquet: PLC는 plc_wide_parquet_writer만 사용 (plc_data/YYYYMMDD.parquet 단일 파일).
+        # append_point_to_parquet를 쓰면 plc_data/M·D·Y 등으로 디렉터리가 나뉜다.
         return True
     except Exception:
         return False
@@ -109,7 +92,7 @@ def write_plc_batch(
     timestamp: 폴링 완료 시점(초 단위 float, time.time()). None이면 기록 시점 사용.
                설정 시 UTC datetime으로 변환해 각 Point의 _time에 ms 단위까지 저장.
     measurement: 저장 measurement 이름 (예: plc, M, Y, D)
-    interval_key: parquet 분리 저장용 폴링 키(예: 50ms, 1s, 1min, 1h)
+    interval_key: 로깅/호환용(Parquet는 plc_wide_parquet_writer 사용)
     """
     api = _get_client()
     if api is None:
@@ -121,7 +104,6 @@ def write_plc_batch(
         # datetime(UTC)으로 넘겨야 클라이언트가 _time을 초 단위로 잘리지 않고 ms까지 저장함
         dt = datetime.fromtimestamp(timestamp, tz=timezone.utc) if timestamp is not None else None
         points = []
-        parquet_fields: dict[str, object] = {}
         device_for_tag = ""
         for r in records:
             variable = r[0]
@@ -135,29 +117,14 @@ def write_plc_batch(
             if isinstance(value, (int, float, bool)):
                 fv = _field_value_for_influx(value)
                 p = p.field("value", fv)
-                parquet_fields[variable] = fv
             else:
                 fv = str(value)
                 p = p.field("value_str", fv)
-                parquet_fields[variable] = fv
             if dt is not None:
                 p = p.time(dt)
             points.append(p)
         api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=points)
-        # Parquet는 배치 1행(동일 시각의 다변수 묶음)으로 저장해 row 폭증을 방지.
-        append_point_to_parquet(
-            bucket=INFLUX_BUCKET,
-            measurement=measurement,
-            tags={
-                "device": device_for_tag,
-                "record_count": len(records),
-                "interval_key": interval_key or "",
-            },
-            fields=parquet_fields,
-            timestamp_ns=int(timestamp * 1_000_000_000) if timestamp is not None else None,
-            source="plc_writer_batch_compact",
-            interval_key=interval_key,
-        )
+        # Parquet: plc_wide_parquet_writer(일별 와이드)에서 influxdb_from_mc 경로로만 기록.
         return True
     except Exception as e:
         err_parts = [str(e)]
@@ -259,7 +226,7 @@ def export_plc_csv(start_iso: str, end_iso: str) -> tuple[str | None, str | None
 
 def export_plc_csv_pivot(start_iso: str, end_iso: str, group_key: str) -> tuple[str | None, str | None]:
     """
-    지정 구간·폴링 그룹(50ms|1s|1min|1h)의 plc 데이터를 조회해
+    지정 구간·폴링 그룹(50ms|1s)의 plc 데이터를 조회해
     행=변수명, 열=타임스탬프, 셀=value 인 CSV 반환.
     반환: (csv_string, None) 성공 시, (None, error_message) 실패 시.
     """

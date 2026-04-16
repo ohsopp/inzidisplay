@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 _DATA_ROOT = _PROJECT_ROOT / "data"
-_GROUPS = ("50ms", "1s", "1min", "1h")
+_GROUPS = ("50ms", "1s")
 
 
 def _iter_group_source_files(group_dir: Path, date_yyyymmdd: str | None = None) -> list[Path]:

@@ -14,7 +14,7 @@ from pathlib import Path
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 _DATA_ROOT = _PROJECT_ROOT / "data"
-_GROUPS = ("50ms", "1s", "1min", "1h")
+_GROUPS = ("50ms", "1s")
 _locks = {g: threading.Lock() for g in _GROUPS}
 _parquet_import_error_logged = False
 

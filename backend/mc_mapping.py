@@ -56,7 +56,7 @@ def get_mc_entries():
     return result
 
 
-# InfluxDB 1시간 주기 저장 대상 (50ms 폴링은 하되 저장만 1시간마다)
+# InfluxDB 1시간 주기 저장 대상 (별도 로직; MC 폴링 주기와 무관)
 INFLUX_HOURLY_SAVE_NAMES = frozenset({
     "currentDieNumber_D140",
     "currentDieName_D1560", "currentDieName_D1561", "currentDieName_D1562", "currentDieName_D1563",
@@ -72,63 +72,39 @@ INFLUX_HOURLY_SAVE_NAMES = frozenset({
     "presetCounter_D1817",
 })
 
-# 폴링 주기별 변수명 (대시보드 MC 폴러용)
-# 1초: boolean 전체 + 토탈카운터, 현재생산량, 과부족수량, 카운트수량, 금일가동수량, 금일 가동시간
-POLL_1SEC_NAMES = frozenset({
-    "totalCounter_D1820", "totalCounter_D1821",
-    "currentProduction_D1812", "currentProduction_D1813",
-    "defficiencyQuantity_D1814", "defficiencyQuantity_D1815",
-    "productionCounter_D1810", "productionCounter_D1811",
-    "todayStrokeCount_D1912", "todayStrokeCount_D1913",
-    "todayRunningTime_D1914",
-})
-# 1분: C.P.M, S.P.M
-POLL_1MIN_NAMES = frozenset({"cPMCyclePerMinute_D104", "strokePerMinute_D126"})
-# 1시간: 현재/다음 금형번호·금형이름·다이하이트·바란스에어압력, 생산계획량(목표 타발수)
-POLL_1HOUR_NAMES = INFLUX_HOURLY_SAVE_NAMES
-
 
 def get_mc_entries_by_poll_interval():
     """
     폴링 주기별로 엔트리 분리 반환.
-    반환: (entries_50ms, entries_1s, entries_1min, entries_1h)
-    - 1s: Boolean 전체 + POLL_1SEC_NAMES
-    - 1min: POLL_1MIN_NAMES (C.P.M, S.P.M)
-    - 1h: POLL_1HOUR_NAMES (금형/다이/바란스/생산계획·목표타발)
-    - 50ms: 나머지 전부
+    반환: (entries_50ms, entries_1s)
+    - 1s: dataType이 boolean 또는 string인 항목 전부
+    - 50ms: 그 외(word, dword 등)
     """
     entries = get_mc_entries()
-    e_1h = []
-    e_1min = []
     e_1s = []
     e_50ms = []
     for e in entries:
-        name, dev, addr, data_type, length = e
-        if name in POLL_1HOUR_NAMES:
-            e_1h.append(e)
-        elif name in POLL_1MIN_NAMES:
-            e_1min.append(e)
-        elif (data_type or "").strip().lower() == "boolean" or name in POLL_1SEC_NAMES:
+        _, _, _, data_type, _ = e
+        dt = (data_type or "").strip().lower()
+        if dt in ("boolean", "string"):
             e_1s.append(e)
         else:
             e_50ms.append(e)
-    return (e_50ms, e_1s, e_1min, e_1h)
+    return (e_50ms, e_1s)
 
 
-POLL_INTERVAL_KEYS = ("50ms", "1s", "1min", "1h")
+POLL_INTERVAL_KEYS = ("50ms", "1s")
 
 
 def get_variable_names_by_poll_interval() -> dict[str, list[str]]:
     """
     폴링 주기별 변수명 리스트. CSV export 시 그룹 필터·행 순서용.
-    반환: {"50ms": [name, ...], "1s": [...], "1min": [...], "1h": [...]}
+    반환: {"50ms": [...], "1s": [...]}
     """
-    e_50ms, e_1s, e_1min, e_1h = get_mc_entries_by_poll_interval()
+    e_50ms, e_1s = get_mc_entries_by_poll_interval()
     return {
         "50ms": [e[0] for e in e_50ms],
         "1s": [e[0] for e in e_1s],
-        "1min": [e[0] for e in e_1min],
-        "1h": [e[0] for e in e_1h],
     }
 
 

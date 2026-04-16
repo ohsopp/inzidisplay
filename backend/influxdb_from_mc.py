@@ -2,7 +2,10 @@
 대시보드 MC 폴러에서 받은 parsed 데이터를 InfluxDB에 기록.
 - measurement를 디바이스 타입(M/Y/D)으로 분리
 - 모든 변수·모든 값(숫자/문자 포함) 저장
+- Parquet(와이드·일별 단일 파일)는 plc_wide_parquet_writer에서 처리
 """
+import time
+
 from mc_mapping import get_name_to_device
 from influxdb_writer import write_plc_batch
 
@@ -15,11 +18,20 @@ def write_parsed_to_influx(
     """
     MC 폴러에서 받은 parsed {변수명: 값}을 규칙에 따라 InfluxDB에 기록.
     timestamp: 폴링 완료 시점(초 단위 float, time.time()). None이면 기록 시점 사용.
-    interval_key: 폴링 스레드 키(50ms|1s|1min|1h). 로깅용.
+    interval_key: 폴링 스레드 키(50ms|1s). 로깅용.
     """
     global _first_write_logged
     if not parsed:
         return
+    ts = timestamp if timestamp is not None else time.time()
+    if interval_key in ("50ms", "1s"):
+        try:
+            from plc_wide_parquet_writer import append_plc_wide_row
+
+            append_plc_wide_row(parsed, interval_key, ts)
+        except Exception as e:
+            print("[PLC Wide Parquet] 기록 오류:", e, flush=True)
+
     name_to_device = get_name_to_device()
     wrote_any = False
 
@@ -39,7 +51,7 @@ def write_parsed_to_influx(
             continue
         ok = write_plc_batch(
             records,
-            timestamp=timestamp,
+            timestamp=ts,
             measurement=device,
             interval_key=interval_key,
         )
@@ -51,7 +63,7 @@ def write_parsed_to_influx(
     if unknown_records:
         wrote_any = write_plc_batch(
             unknown_records,
-            timestamp=timestamp,
+            timestamp=ts,
             measurement="plc",
             interval_key=interval_key,
         ) or wrote_any

@@ -739,7 +739,7 @@ function App() {
             <section className="csv-modal-section">
               <span className="csv-modal-label">폴링 주기 그룹</span>
               <div className="csv-group-options" role="group" aria-label="폴링 주기 선택">
-                {['50ms', '1s', '1min', '1h'].map((g) => (
+                {['50ms', '1s'].map((g) => (
                   <button
                     key={g}
                     type="button"
@@ -874,7 +874,6 @@ function App() {
               mcConnected={mcConnected}
               mcValues={mcValues}
               ioVariableList={ioVariableList}
-              apiUrl={API_URL}
             />
           )}
 

@@ -5,6 +5,9 @@ Path layout:
   default: {INFLUX_PARQUET_DIR}/{bucket}/{measurement}/{YYYYMMDD}.parquet
   with interval_key: {INFLUX_PARQUET_DIR}/{bucket}/{interval_key}/{measurement}/{YYYYMMDD}.parquet
 
+PLC 버킷 이름이 plc_data 인 경우 이 모듈은 아무 것도 쓰지 않는다.
+(PLC Parquet는 backend/plc_wide_parquet_writer.py → parquet_logs/plc_data/YYYYMMDD.parquet 단일 파일만 사용.)
+
 Schema:
   t_utc, t_kst, bucket, measurement, tags_json, fields_json, source
 """
@@ -189,6 +192,9 @@ def append_point_to_parquet(
     interval_key: str | None = None,
 ) -> None:
     if not is_parquet_write_enabled():
+        return
+    # plc_data 버킷은 M/D/Y·50ms/1s 등으로 디렉터리가 나뉘지 않게, dual-write 경로를 사용하지 않는다.
+    if _normalize_name(str(bucket)) == "plc_data":
         return
     key, row = _row_for_point(
         bucket=bucket,

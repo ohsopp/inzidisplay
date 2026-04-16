@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - 의존성 누락 시 런타임 처리
     psycopg = None
 
 
-POLL_RATE_KEYS = ("50ms", "1s", "1min", "1h")
+POLL_RATE_KEYS = ("50ms", "1s")
 
 
 def _build_connect_kwargs() -> dict:
