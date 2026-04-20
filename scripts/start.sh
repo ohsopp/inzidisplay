@@ -4,6 +4,9 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# --- InfluxDB (Docker): 기동 후 문제 시 한 번 재시작 ---
+"$REPO_ROOT/scripts/ensure-influxdb-docker.sh"
+
 BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 VENV_DIR="$BACKEND_DIR/venv"

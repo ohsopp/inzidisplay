@@ -24,7 +24,7 @@ cat > "$DESKTOP/PLC모니터.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=PLC 모니터
-Comment=PLC 모니터 실행 (Vite 개발서버 http://localhost:5173 자동 오픈)
+Comment=PLC 모니터 실행 (InfluxDB Docker 자동 기동, Vite http://localhost:5173)
 Exec=$EXEC
 Path=$REPO_ROOT
 Terminal=true
