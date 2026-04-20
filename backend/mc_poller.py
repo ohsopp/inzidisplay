@@ -57,7 +57,7 @@ def _poll_chunk(host, port, chunk):
     return read_mc_variables(host, port, chunk)
 
 
-def _bootstrap_sequential_load(host, port, all_entries, on_parsed, on_error):
+def _bootstrap_sequential_load(host, port, all_entries, on_parsed, on_error, emit_snapshot=True):
     """
     전체 엔트리를 한 번의 연결로 순차 읽기. on_parsed(merged, None) — 주기 태그 없음(Influx/브로드캐스트만).
     반환: (성공 여부, merged 또는 None). 성공 시 merged로 plc_wide 시드 등에 사용.
@@ -70,7 +70,8 @@ def _bootstrap_sequential_load(host, port, all_entries, on_parsed, on_error):
             return False, None
         if all(v == "-" for v in merged.values()):
             return False, None
-        on_parsed(merged, None)
+        if emit_snapshot:
+            on_parsed(merged, None)
         return True, merged
     except Exception as e:
         on_error(str(e))
@@ -205,12 +206,19 @@ def run_poller(host, port, on_parsed, on_error, stop_event):
 
     all_ordered = e_50ms + e_1s
     skip_initial_after_bootstrap = False
-    if BOOTSTRAP_SEQUENTIAL_LOAD and all_ordered:
+    if all_ordered:
         t_boot = time.perf_counter()
-        boot_ok, boot_merged = _bootstrap_sequential_load(host, port, all_ordered, on_parsed, on_error)
+        boot_ok, boot_merged = _bootstrap_sequential_load(
+            host,
+            port,
+            all_ordered,
+            on_parsed,
+            on_error,
+            emit_snapshot=BOOTSTRAP_SEQUENTIAL_LOAD,
+        )
         skip_initial_after_bootstrap = boot_ok
         print(
-            "[MC] 초기 순차 로드 %s (%.2fs, %d개)"
+            "[MC] 초기 전체 로드 %s (%.2fs, %d개)"
             % ("완료" if boot_ok else "실패·미전송(주기 폴링에서 재시도)", time.perf_counter() - t_boot, len(all_ordered)),
             flush=True,
         )

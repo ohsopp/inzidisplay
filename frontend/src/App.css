@@ -8,6 +8,9 @@
   display: flex;
   flex-direction: column;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background:
+    radial-gradient(1200px 420px at 15% -25%, rgba(39, 215, 201, 0.08), transparent 60%),
+    radial-gradient(900px 340px at 90% -20%, rgba(44, 166, 214, 0.08), transparent 62%);
 }
 
 .header {
@@ -156,6 +159,12 @@
   min-height: 0;
   gap: 0;
   overflow: hidden;
+  border: 1px solid rgba(133, 170, 188, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(6, 28, 40, 0.82), rgba(5, 23, 33, 0.86));
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .side-tabs {
@@ -165,8 +174,8 @@
   flex-shrink: 0;
   padding: 0.5rem 0;
   gap: 0.25rem;
-  border-right: 1px solid var(--border);
-  background: var(--bg-secondary);
+  border-right: 1px solid rgba(133, 170, 188, 0.2);
+  background: linear-gradient(180deg, rgba(9, 40, 55, 0.82), rgba(7, 31, 44, 0.88));
 }
 
 .side-tab {
@@ -181,18 +190,21 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  border: 1px solid transparent;
 }
 
 .side-tab:hover {
-  background: var(--bg-tertiary);
+  background: rgba(139, 180, 199, 0.12);
   color: var(--text-primary);
+  border-color: rgba(139, 180, 199, 0.22);
 }
 
 .side-tab.active {
-  background: rgba(0, 212, 170, 0.15);
-  color: var(--accent);
+  background: linear-gradient(90deg, rgba(139, 180, 199, 0.2), rgba(139, 180, 199, 0.12));
+  color: var(--text-primary);
   font-weight: 500;
+  border: 1px solid rgba(139, 180, 199, 0.34);
 }
 
 .side-tab-label {
@@ -212,6 +224,9 @@
   flex-direction: column;
   gap: 1.5rem;
   padding-left: 1.5rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .main {
@@ -226,15 +241,18 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background:
+    radial-gradient(900px 280px at 14% -28%, rgba(122, 172, 196, 0.11), transparent 62%),
+    linear-gradient(180deg, rgba(8, 36, 50, 0.96), rgba(7, 30, 42, 0.96));
+  border: 1px solid rgba(128, 167, 186, 0.22);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .parsed-view-header {
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(128, 167, 186, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
 }
 
 .parsed-view-title-row {
@@ -341,8 +359,8 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border);
+  background: rgba(10, 50, 66, 0.9);
+  border-bottom: 1px solid rgba(39, 215, 201, 0.18);
   border-radius: 6px 6px 0 0;
   font-weight: 600;
   color: var(--text-secondary);

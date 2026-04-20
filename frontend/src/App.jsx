@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import './App.css'
 import PlcDashboard from './components/PlcDashboard'
+import PlcMainDashboard from './components/PlcMainDashboard'
 import SensorTrendCharts from './components/SensorTrendCharts'
 import McEditModal from './components/McEditModal'
 import McProtocolCardView from './components/McProtocolCardView'
@@ -267,7 +268,7 @@ function parseTemperatureTrendPoint(value) {
 
 function App() {
   const [serverConnected, setServerConnected] = useState(false)
-  const [activeView, setActiveView] = useState('plc') // 'plc' | 'mc' | 'mcCard' | 'dashboard'
+  const [activeView, setActiveView] = useState('plcMain') // 'plcMain' | 'plc' | 'mc' | 'mcCard' | 'dashboard'
   const [ioVariableList, setIoVariableList] = useState([]) // [ [name, lengthBit], ... ]
   const [showBitsCol, setShowBitsCol] = useState(false)
   const [showHexCol, setShowHexCol] = useState(false)
@@ -836,6 +837,14 @@ function App() {
         <nav className="side-tabs" aria-label="화면 전환">
           <button
             type="button"
+            className={`side-tab ${activeView === 'plcMain' ? 'active' : ''}`}
+            onClick={() => setActiveView('plcMain')}
+          >
+            <span className="side-tab-label">PLC 메인 대시보드</span>
+            <span className="side-tab-desc">운영 현황 요약</span>
+          </button>
+          <button
+            type="button"
             className={`side-tab ${activeView === 'plc' ? 'active' : ''}`}
             onClick={() => setActiveView('plc')}
           >
@@ -869,6 +878,10 @@ function App() {
         </nav>
 
         <div className="view-content">
+          {activeView === 'plcMain' && (
+            <PlcMainDashboard />
+          )}
+
           {activeView === 'plc' && (
             <PlcDashboard
               mcConnected={mcConnected}

@@ -231,7 +231,7 @@
   "M332": {
     "dataType": "Boolean",
     "length": 1,
-    "value": 0,
+    "value": 1,
     "name": "None10_M332"
   },
   "M333": {
@@ -771,7 +771,7 @@
   "D100": {
     "dataType": "Word",
     "length": 1,
-    "value": 180,
+    "value": 200,
     "name": "pressAngle_D100"
   },
   "D104": {

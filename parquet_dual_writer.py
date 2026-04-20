@@ -9,7 +9,8 @@ PLC 버킷 이름이 plc_data 인 경우 이 모듈은 아무 것도 쓰지 않�
 (PLC Parquet는 backend/plc_wide_parquet_writer.py → parquet_logs/plc_data/YYYYMMDD.parquet 단일 파일만 사용.)
 
 Schema:
-  t_utc, t_kst, bucket, measurement, tags_json, fields_json, source
+  - temperature: t_kst, value
+  - vibration: t_kst, V-rms, a-peak, a-rms, temperature, crest
 """
 from __future__ import annotations
 
@@ -40,17 +41,29 @@ _BATCH_SIZE = int(os.environ.get("INFLUX_PARQUET_BATCH_SIZE", "200") or "200")
 _FLUSH_SEC = float(os.environ.get("INFLUX_PARQUET_FLUSH_SEC", "2.0") or "2.0")
 _COMPRESSION = (os.environ.get("INFLUX_PARQUET_COMPRESSION", "snappy") or "snappy").strip().lower()
 
-_PARQUET_SCHEMA = pa.schema(
+_SCHEMA_TEMPERATURE = pa.schema(
     [
-        ("t_utc", pa.string()),
         ("t_kst", pa.string()),
-        ("bucket", pa.string()),
-        ("measurement", pa.string()),
-        ("tags_json", pa.string()),
-        ("fields_json", pa.string()),
-        ("source", pa.string()),
+        ("value", pa.float64()),
     ]
 )
+
+_SCHEMA_VIBRATION = pa.schema(
+    [
+        ("t_kst", pa.string()),
+        ("V-rms", pa.float64()),
+        ("a-peak", pa.float64()),
+        ("a-rms", pa.float64()),
+        ("temperature", pa.float64()),
+        ("crest", pa.float64()),
+    ]
+)
+
+
+def _schema_for_measurement(measurement: str) -> pa.Schema:
+    if str(measurement or "").strip().lower() == "temperature":
+        return _SCHEMA_TEMPERATURE
+    return _SCHEMA_VIBRATION
 
 # key: (bucket, interval_key, measurement, yyyymmdd) -> rows
 _buffers: dict[tuple[str, str, str, str], list[dict[str, str]]] = {}
@@ -81,50 +94,72 @@ def _row_for_point(
     timestamp_ns: int | None,
     source: str,
     interval_key: str | None = None,
-) -> tuple[tuple[str, str, str, str], dict[str, str]]:
+) -> tuple[tuple[str, str, str, str], dict[str, float | str | None]]:
     if timestamp_ns is None:
         timestamp_ns = time.time_ns()
     dt_utc = datetime.fromtimestamp(timestamp_ns / 1_000_000_000, tz=timezone.utc)
     dt_kst = dt_utc.astimezone(KST)
     # 파일명은 t_kst 날짜와 맞춤 (UTC 날짜면 KST 자정 전후에 하루 어긋남)
     date_str = dt_kst.strftime("%Y%m%d")
-    t_utc = dt_utc.isoformat()
     t_kst = dt_kst.isoformat()
     interval_norm = _normalize_name(interval_key) if interval_key else "_default"
     key = (_normalize_name(bucket), interval_norm, _normalize_name(measurement), date_str)
-    row = {
-        "t_utc": t_utc,
-        "t_kst": t_kst,
-        "bucket": str(bucket),
-        "measurement": str(measurement),
-        "tags_json": json.dumps({k: _serialize_value(v) for k, v in (tags or {}).items()}, ensure_ascii=False),
-        "fields_json": json.dumps({k: _serialize_value(v) for k, v in (fields or {}).items()}, ensure_ascii=False),
-        "source": str(source or ""),
-    }
+    row: dict[str, float | str | None] = {"t_kst": t_kst}
+    measurement_norm = str(measurement or "").strip().lower()
+    if measurement_norm == "temperature":
+        try:
+            row["value"] = (
+                float((fields or {}).get("value")) if (fields or {}).get("value") is not None else None
+            )
+        except (TypeError, ValueError):
+            row["value"] = None
+    elif measurement_norm == "vibration":
+        field_map = {
+            "V-rms": "v_rms",
+            "a-peak": "a_peak",
+            "a-rms": "a_rms",
+            "temperature": "temperature",
+            "crest": "crest",
+        }
+        for col_name, src_name in field_map.items():
+            try:
+                v = (fields or {}).get(src_name)
+                row[col_name] = float(v) if v is not None else None
+            except (TypeError, ValueError):
+                row[col_name] = None
     return key, row
 
 
-def _rows_to_table(rows: list[dict[str, str]]) -> pa.Table:
-    return pa.Table.from_arrays(
-        [
-            pa.array([r["t_utc"] for r in rows]),
-            pa.array([r["t_kst"] for r in rows]),
-            pa.array([r["bucket"] for r in rows]),
-            pa.array([r["measurement"] for r in rows]),
-            pa.array([r["tags_json"] for r in rows]),
-            pa.array([r["fields_json"] for r in rows]),
-            pa.array([r["source"] for r in rows]),
-        ],
-        schema=_PARQUET_SCHEMA,
-    )
+def _rows_to_table(rows: list[dict[str, float | str | None]], schema: pa.Schema) -> pa.Table:
+    arrays = []
+    for field in schema:
+        arrays.append(pa.array([r.get(field.name) for r in rows], type=field.type))
+    return pa.Table.from_arrays(arrays, schema=schema)
 
 
 def _merge_write(file_path: str, rows: list[dict[str, str]]) -> None:
-    table_new = _rows_to_table(rows)
+    measurement = os.path.basename(os.path.dirname(file_path))
+    schema = _schema_for_measurement(measurement)
+    table_new = _rows_to_table(rows, schema)
     if os.path.exists(file_path):
         try:
             old = pq.read_table(file_path)
-            table = pa.concat_tables([old, table_new])
+            cols = []
+            for field in schema:
+                name = field.name
+                if name in old.column_names:
+                    col = old[name]
+                    if col.type == field.type:
+                        cols.append(col)
+                    else:
+                        try:
+                            cols.append(col.cast(field.type))
+                        except Exception:
+                            cols.append(pa.array([None] * old.num_rows, type=field.type))
+                else:
+                    cols.append(pa.array([None] * old.num_rows, type=field.type))
+            old_aligned = pa.Table.from_arrays(cols, schema=schema)
+            table = pa.concat_tables([old_aligned, table_new])
         except Exception:
             table = table_new
     else:

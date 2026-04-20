@@ -952,5 +952,7 @@
     "dataType": "Dword",
     "scale": "1",
     "description": "현재까지 타발된수 (current production과 별개)"
-  }
+  },
+  "mitsubishi_device": "Y",
+  "mitsubishi_d_start": 0
 }

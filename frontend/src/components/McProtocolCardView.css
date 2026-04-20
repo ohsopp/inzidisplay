@@ -212,14 +212,14 @@
   border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--bg-secondary);
-  color: var(--text-primary);
+  color: #eaf3f8;
   cursor: pointer;
   transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 
 .mc-protocol-card-hidden-chip:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: #ffffff;
   background: rgba(77, 171, 247, 0.06);
 }
 
@@ -279,17 +279,18 @@
 .mc-protocol-card-item-name {
   flex: 1;
   min-width: 0;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
-  color: var(--accent);
-  letter-spacing: -0.02em;
+  font-family: 'Pretendard', 'Inter', 'Noto Sans KR', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #dbeeff;
+  letter-spacing: -0.01em;
   word-break: break-all;
   line-height: 1.4;
+  text-shadow: 0 1px 0 rgba(3, 13, 20, 0.45);
 }
 
 .mc-protocol-card-item:hover .mc-protocol-card-item-name {
-  color: var(--accent-hover);
+  color: #f6fbff;
 }
 
 .mc-protocol-card-eye-btn {
@@ -341,7 +342,7 @@
   margin-bottom: 0.35rem;
   font-size: 0.62rem;
   font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
-  color: var(--text-secondary);
+  color: #a9bcc8;
   line-height: 1.35;
 }
 
@@ -359,7 +360,7 @@
 
 .mc-protocol-card-aux-val {
   word-break: break-all;
-  color: var(--text-primary);
+  color: #eef6fb;
   opacity: 0.92;
 }
 
@@ -388,7 +389,7 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
   word-break: break-word;
-  color: #f4f8fc;
+  color: #ffffff;
   letter-spacing: -0.02em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
@@ -409,7 +410,7 @@
   padding-top: 0.4rem;
   border-top: 1px solid var(--border);
   font-size: 0.7rem;
-  color: var(--text-secondary);
+  color: #9fb3c0;
   line-height: 1.35;
   min-width: 0;
 }
