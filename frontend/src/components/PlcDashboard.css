@@ -10,10 +10,45 @@
   padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--border);
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.plc-hero-back-row {
+  display: flex;
+  align-items: center;
+}
+
+.plc-hero-title-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.8rem;
   flex-wrap: wrap;
+}
+
+.plc-back-btn {
+  flex-shrink: 0;
+  padding: 0.38rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.plc-back-btn:hover {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.35);
+}
+
+.plc-back-btn:focus-visible {
+  outline: 2px solid rgba(0, 212, 170, 0.55);
+  outline-offset: 2px;
 }
 
 .plc-title-wrap h2 {

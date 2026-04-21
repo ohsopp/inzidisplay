@@ -1,4 +1,113 @@
-/* MC Protocol 카드 탭 — parsed-view / mc-view 와 동일 토큰 사용, 카드 전용 보조 스타일만 정의 */
+/* MC Protocol 카드 UI — parsed-view / mc-view 와 동일 토큰 사용, 카드 전용 보조 스타일만 정의 */
+
+/* App MC Protocol 화면 안에 삽입할 때: 외곽 section 없이 남은 영역 채움 */
+.mc-protocol-card-section--embedded {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mc-protocol-card-section--embedded .mc-protocol-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mc-protocol-card-embedded-toolbar {
+  flex-shrink: 0;
+  padding: 0.62rem 1rem 0.68rem;
+  border-bottom: 1px solid rgba(128, 167, 186, 0.22);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012));
+}
+
+.mc-protocol-card-embedded-toolbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.7rem 1.1rem;
+}
+
+.mc-protocol-card-embedded-toolbar-inner--list {
+  justify-content: flex-start;
+}
+
+/* App: 표시 열 + 숨김 드롭다운 한 줄 (Card 탭) */
+.mc-protocol-card-embedded-toolbar-inner--with-hidden {
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.65rem 1rem;
+}
+
+.mc-protocol-card-embedded-toolbar-inner--with-hidden .mc-protocol-card-toolbar--embedded {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mc-protocol-card-embedded-toolbar-inner--with-hidden .mc-protocol-card-hidden-pop {
+  margin-left: 0;
+  align-self: center;
+}
+
+.mc-protocol-card-toolbar--embedded {
+  flex: 1 1 min(100%, 440px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.mc-protocol-card-toolbar--embedded .parsed-meta-toolbar-label {
+  display: block;
+  margin-bottom: 0.38rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b8cad8;
+  letter-spacing: 0.03em;
+}
+
+.mc-protocol-card-toolbar--embedded .parsed-meta-toolbar-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.mc-protocol-card-toolbar--embedded .parsed-meta-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0;
+  padding: 0.24rem 0.52rem;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 156, 179, 0.3);
+  background: rgba(6, 22, 34, 0.45);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mc-protocol-card-toolbar--embedded .parsed-meta-check-wrap:hover {
+  border-color: rgba(0, 212, 170, 0.35);
+  background: rgba(0, 212, 170, 0.06);
+}
+
+.mc-protocol-card-embedded-toolbar-inner .mc-protocol-card-hidden-pop {
+  margin-left: 0;
+  align-self: center;
+}
+
+.mc-protocol-card-embedded-toolbar-inner .mc-protocol-card-hidden-trigger {
+  padding: 0.32rem 0.62rem 0.32rem 0.68rem;
+  font-size: 0.74rem;
+  border-radius: 8px;
+}
+
+.mc-protocol-card-error--embedded {
+  margin: 0;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid rgba(255, 107, 107, 0.22);
+}
 
 .mc-protocol-card-section .mc-protocol-card-header {
   padding-bottom: 0.65rem;

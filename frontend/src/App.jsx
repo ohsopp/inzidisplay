@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import './App.css'
 import PlcDashboard from './components/PlcDashboard'
 import PlcMainDashboard from './components/PlcMainDashboard'
 import SensorTrendCharts from './components/SensorTrendCharts'
 import McEditModal from './components/McEditModal'
-import McProtocolCardView from './components/McProtocolCardView'
+import McProtocolCardView, {
+  McProtocolCardHiddenPopover,
+  loadMcCardHiddenInitial,
+  persistMcCardHiddenSet,
+} from './components/McProtocolCardView'
 import useMcEditEditor from './hooks/useMcEditEditor'
 
 // 배포: same-origin + vercel.json 이 /api/* 를 원격 Gunicorn(iptime:6005)으로 프록시.
@@ -268,7 +272,15 @@ function parseTemperatureTrendPoint(value) {
 
 function App() {
   const [serverConnected, setServerConnected] = useState(false)
-  const [activeView, setActiveView] = useState('plcMain') // 'plcMain' | 'plc' | 'mc' | 'mcCard' | 'dashboard'
+  const [activeView, setActiveView] = useState('plcMain') // 'plcMain' | 'plc' | 'mc' | 'dashboard'
+  const [mcSubTab, setMcSubTab] = useState('card') // 'list' | 'card' — MC Protocol 화면 내부 탭 (기본 Card)
+  const [mcCardHiddenNames, setMcCardHiddenNames] = useState(() =>
+    typeof window !== 'undefined' ? loadMcCardHiddenInitial() : new Set()
+  )
+  const handleMcCardHiddenChange = useCallback((nextSet) => {
+    persistMcCardHiddenSet(nextSet)
+    setMcCardHiddenNames(nextSet)
+  }, [])
   const [ioVariableList, setIoVariableList] = useState([]) // [ [name, lengthBit], ... ]
   const [showBitsCol, setShowBitsCol] = useState(false)
   const [showHexCol, setShowHexCol] = useState(false)
@@ -837,19 +849,11 @@ function App() {
         <nav className="side-tabs" aria-label="화면 전환">
           <button
             type="button"
-            className={`side-tab ${activeView === 'plcMain' ? 'active' : ''}`}
+            className={`side-tab ${activeView === 'plcMain' || activeView === 'plc' ? 'active' : ''}`}
             onClick={() => setActiveView('plcMain')}
           >
-            <span className="side-tab-label">PLC 메인 대시보드</span>
-            <span className="side-tab-desc">운영 현황 요약</span>
-          </button>
-          <button
-            type="button"
-            className={`side-tab ${activeView === 'plc' ? 'active' : ''}`}
-            onClick={() => setActiveView('plc')}
-          >
             <span className="side-tab-label">PLC 대시보드</span>
-            <span className="side-tab-desc">고속프레스 메인</span>
+            <span className="side-tab-desc">운영 현황 요약</span>
           </button>
           <button
             type="button"
@@ -858,14 +862,6 @@ function App() {
           >
             <span className="side-tab-label">MC Protocol</span>
             <span className="side-tab-desc">MC 3E 폴링</span>
-          </button>
-          <button
-            type="button"
-            className={`side-tab ${activeView === 'mcCard' ? 'active' : ''}`}
-            onClick={() => setActiveView('mcCard')}
-          >
-            <span className="side-tab-label">MC Protocol (card)</span>
-            <span className="side-tab-desc">카드 UI</span>
           </button>
           <button
             type="button"
@@ -879,7 +875,11 @@ function App() {
 
         <div className="view-content">
           {activeView === 'plcMain' && (
-            <PlcMainDashboard />
+            <PlcMainDashboard
+              mcValues={mcValues}
+              ioVariableList={ioVariableList}
+              onNavigateToPlc={() => setActiveView('plc')}
+            />
           )}
 
           {activeView === 'plc' && (
@@ -887,14 +887,20 @@ function App() {
               mcConnected={mcConnected}
               mcValues={mcValues}
               ioVariableList={ioVariableList}
+              onBackToOverview={() => setActiveView('plcMain')}
             />
           )}
 
           {activeView === 'mc' && (
             <section className="parsed-view mc-view">
               <div className="parsed-view-header">
-                <div className="parsed-view-title-row">
+                <div className="parsed-view-title-row mc-view-title-row--split">
                   <h2>MC Protocol (3E)</h2>
+                  <span
+                    className={`mc-protocol-card-pill ${mcConnected ? 'mc-protocol-card-pill--on' : 'mc-protocol-card-pill--off'}`}
+                  >
+                    {mcConnected ? 'MC 폴링 중' : 'MC 미연결'}
+                  </span>
                 </div>
                 <section className="control-panel mc-control">
                   <div className="control-row">
@@ -948,18 +954,56 @@ function App() {
                   </div>
                   {mcError && <p className="error-message">{mcError}</p>}
                 </section>
-                <div className="parsed-meta-toolbar">
-                  <span className="parsed-meta-toolbar-label">표시 열</span>
-                  <div className="parsed-meta-toolbar-checks">
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showBitsCol} onChange={(e) => setShowBitsCol(e.target.checked)} /> 2진수</label>
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showHexCol} onChange={(e) => setShowHexCol(e.target.checked)} /> 16진수</label>
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showValueCol} onChange={(e) => setShowValueCol(e.target.checked)} /> 값</label>
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaBit} onChange={(e) => setShowMetaBit(e.target.checked)} /> 비트</label>
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaType} onChange={(e) => setShowMetaType(e.target.checked)} /> 타입</label>
-                    <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaDesc} onChange={(e) => setShowMetaDesc(e.target.checked)} /> 설명</label>
+              </div>
+              <div className="mc-protocol-card-embedded-toolbar">
+                <div
+                  className={`mc-protocol-card-embedded-toolbar-inner ${
+                    mcSubTab === 'card'
+                      ? 'mc-protocol-card-embedded-toolbar-inner--with-hidden'
+                      : 'mc-protocol-card-embedded-toolbar-inner--list'
+                  }`}
+                >
+                  <div className="parsed-meta-toolbar mc-protocol-card-toolbar mc-protocol-card-toolbar--embedded">
+                    <span className="parsed-meta-toolbar-label">표시 열</span>
+                    <div className="parsed-meta-toolbar-checks">
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showBitsCol} onChange={(e) => setShowBitsCol(e.target.checked)} /> 2진수</label>
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showHexCol} onChange={(e) => setShowHexCol(e.target.checked)} /> 16진수</label>
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showValueCol} onChange={(e) => setShowValueCol(e.target.checked)} /> 값</label>
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaBit} onChange={(e) => setShowMetaBit(e.target.checked)} /> 비트</label>
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaType} onChange={(e) => setShowMetaType(e.target.checked)} /> 타입</label>
+                      <label className="parsed-meta-check-wrap"><input type="checkbox" checked={showMetaDesc} onChange={(e) => setShowMetaDesc(e.target.checked)} /> 설명</label>
+                    </div>
                   </div>
+                  {mcSubTab === 'card' ? (
+                    <McProtocolCardHiddenPopover
+                      mcDisplayList={mcDisplayList}
+                      hiddenNames={mcCardHiddenNames}
+                      onChange={handleMcCardHiddenChange}
+                    />
+                  ) : null}
                 </div>
               </div>
+              <div className="mc-view-subtabs" role="tablist" aria-label="Card / List">
+                <button
+                  type="button"
+                  className={`mc-view-subtab ${mcSubTab === 'card' ? 'active' : ''}`}
+                  role="tab"
+                  aria-selected={mcSubTab === 'card'}
+                  onClick={() => setMcSubTab('card')}
+                >
+                  Card
+                </button>
+                <button
+                  type="button"
+                  className={`mc-view-subtab ${mcSubTab === 'list' ? 'active' : ''}`}
+                  role="tab"
+                  aria-selected={mcSubTab === 'list'}
+                  onClick={() => setMcSubTab('list')}
+                >
+                  List
+                </button>
+              </div>
+              {mcSubTab === 'list' && (
               <div className="parsed-view-body">
                 {mcDisplayList.length === 0 ? (
                   <p className="parsed-view-empty">
@@ -1067,34 +1111,38 @@ function App() {
                   </div>
                 )}
               </div>
+              )}
+              {mcSubTab === 'card' && (
+                <McProtocolCardView
+                  embedded
+                  parentHandlesColumns
+                  controlledHiddenNames={mcCardHiddenNames}
+                  onControlledHiddenChange={handleMcCardHiddenChange}
+                  mcDisplayList={mcDisplayList}
+                  mcValues={mcValues}
+                  mcConnected={mcConnected}
+                  mcError={mcError}
+                  displayVariableListLength={displayVariableList.length}
+                  getDisplayValue={getDisplayValue}
+                  decodeForDisplayWithReset={decodeForDisplayWithReset}
+                  formatParsedValueAsBits={formatParsedValueAsBits}
+                  formatParsedValueAsHex={formatParsedValueAsHex}
+                  showBitsCol={showBitsCol}
+                  setShowBitsCol={setShowBitsCol}
+                  showHexCol={showHexCol}
+                  setShowHexCol={setShowHexCol}
+                  showValueCol={showValueCol}
+                  setShowValueCol={setShowValueCol}
+                  showMetaBit={showMetaBit}
+                  setShowMetaBit={setShowMetaBit}
+                  showMetaType={showMetaType}
+                  setShowMetaType={setShowMetaType}
+                  showMetaDesc={showMetaDesc}
+                  setShowMetaDesc={setShowMetaDesc}
+                  onOpenMcEdit={mcEdit.openPopup}
+                />
+              )}
             </section>
-          )}
-
-          {activeView === 'mcCard' && (
-            <McProtocolCardView
-              mcDisplayList={mcDisplayList}
-              mcValues={mcValues}
-              mcConnected={mcConnected}
-              mcError={mcError}
-              displayVariableListLength={displayVariableList.length}
-              getDisplayValue={getDisplayValue}
-              decodeForDisplayWithReset={decodeForDisplayWithReset}
-              formatParsedValueAsBits={formatParsedValueAsBits}
-              formatParsedValueAsHex={formatParsedValueAsHex}
-              showBitsCol={showBitsCol}
-              setShowBitsCol={setShowBitsCol}
-              showHexCol={showHexCol}
-              setShowHexCol={setShowHexCol}
-              showValueCol={showValueCol}
-              setShowValueCol={setShowValueCol}
-              showMetaBit={showMetaBit}
-              setShowMetaBit={setShowMetaBit}
-              showMetaType={showMetaType}
-              setShowMetaType={setShowMetaType}
-              showMetaDesc={showMetaDesc}
-              setShowMetaDesc={setShowMetaDesc}
-              onOpenMcEdit={mcEdit.openPopup}
-            />
           )}
 
           {activeView === 'dashboard' && (

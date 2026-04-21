@@ -75,7 +75,7 @@ export default function useMcEditEditor({ apiUrl, activeView }) {
   }
 
   useEffect(() => {
-    if (activeView !== 'mc' && activeView !== 'mcCard') {
+    if (activeView !== 'mc') {
       setMcEditPopupOpen(false)
     }
   }, [activeView])

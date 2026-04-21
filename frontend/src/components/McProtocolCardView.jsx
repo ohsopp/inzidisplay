@@ -64,11 +64,113 @@ function saveHiddenToStorage(set) {
   }
 }
 
+export function loadMcCardHiddenInitial() {
+  if (typeof window === 'undefined') return new Set()
+  return loadHiddenFromStorage()
+}
+
+export function persistMcCardHiddenSet(set) {
+  saveHiddenToStorage(set)
+}
+
+/** Card 탭에서 표시 열과 같은 줄에 두는 숨김 목록 (상태는 App에서 보관) */
+export function McProtocolCardHiddenPopover({ mcDisplayList, hiddenNames, onChange }) {
+  const hiddenList = useMemo(
+    () => mcDisplayList.map((r) => r.name).filter((name) => hiddenNames.has(name)),
+    [hiddenNames, mcDisplayList]
+  )
+  const visibleCount = useMemo(
+    () => mcDisplayList.filter((r) => !hiddenNames.has(r.name)).length,
+    [hiddenNames, mcDisplayList]
+  )
+
+  const showAllCards = useCallback(() => {
+    onChange(new Set())
+  }, [onChange])
+
+  const hideAllCards = useCallback(() => {
+    onChange(new Set(mcDisplayList.map((r) => r.name)))
+  }, [onChange, mcDisplayList])
+
+  const showCard = useCallback(
+    (name) => {
+      const next = new Set(hiddenNames)
+      next.delete(name)
+      onChange(next)
+    },
+    [hiddenNames, onChange]
+  )
+
+  if (!mcDisplayList.length) return null
+
+  return (
+    <details className="mc-protocol-card-hidden-pop">
+      <summary className="mc-protocol-card-hidden-trigger">
+        <span className="mc-protocol-card-hidden-trigger-label">숨김처리 된 항목</span>
+        <span className="mc-protocol-card-hidden-badge">{hiddenList.length}</span>
+        <span className="mc-protocol-card-hidden-chevron" aria-hidden>
+          ▾
+        </span>
+      </summary>
+      <div className="mc-protocol-card-hidden-pop-panel">
+        <div className="mc-protocol-card-bulk-actions">
+          <button
+            type="button"
+            className="mc-protocol-card-bulk-btn"
+            disabled={hiddenList.length === 0}
+            onClick={(e) => {
+              e.preventDefault()
+              showAllCards()
+            }}
+          >
+            전체 표시
+          </button>
+          <button
+            type="button"
+            className="mc-protocol-card-bulk-btn"
+            disabled={visibleCount === 0}
+            onClick={(e) => {
+              e.preventDefault()
+              hideAllCards()
+            }}
+          >
+            전체 숨기기
+          </button>
+        </div>
+        {hiddenList.length > 0 ? (
+          <div className="mc-protocol-card-hidden-chips">
+            {hiddenList.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className="mc-protocol-card-hidden-chip"
+                title={name}
+                onClick={() => showCard(name)}
+              >
+                <IconEye className="mc-protocol-card-hidden-chip-icon" />
+                <span className="mc-protocol-card-hidden-chip-text">{name}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mc-protocol-card-hidden-empty">숨긴 카드가 없습니다. 개별 숨기기는 각 카드의 눈 아이콘을 누르세요.</p>
+        )}
+      </div>
+    </details>
+  )
+}
+
 /**
  * MC Protocol 변수 목록을 카드 그리드로 표시. 카드별 숨김은 localStorage에 유지됩니다.
- * 표시 열 옵션은 MC Protocol 표 탭과 동일한 state를 공유합니다.
+ * 표시 열 옵션은 MC Protocol 목록 탭과 동일한 state를 공유합니다.
+ * embedded: App의 MC Protocol 화면 안에 넣을 때 외곽 section(parsed-view) 중복을 피합니다.
  */
 export default function McProtocolCardView({
+  embedded = false,
+  /** true면 표시 열은 부모(App)에서만 렌더링합니다. 숨김 UI도 App 표시 열 줄에 둘 때 controlledHiddenNames를 넘깁니다. */
+  parentHandlesColumns = false,
+  controlledHiddenNames,
+  onControlledHiddenChange,
   mcDisplayList,
   mcValues,
   mcConnected,
@@ -92,43 +194,72 @@ export default function McProtocolCardView({
   setShowMetaDesc,
   onOpenMcEdit,
 }) {
-  const [hiddenNames, setHiddenNames] = useState(() =>
+  const [internalHiddenNames, setInternalHiddenNames] = useState(() =>
     typeof window !== 'undefined' ? loadHiddenFromStorage() : new Set()
   )
 
-  const hideCard = useCallback((name) => {
-    setHiddenNames((prev) => {
-      const next = new Set(prev)
-      next.add(name)
-      saveHiddenToStorage(next)
-      return next
-    })
-  }, [])
+  const isHiddenControlled =
+    controlledHiddenNames !== undefined && typeof onControlledHiddenChange === 'function'
 
-  const showCard = useCallback((name) => {
-    setHiddenNames((prev) => {
-      const next = new Set(prev)
-      next.delete(name)
-      saveHiddenToStorage(next)
-      return next
-    })
-  }, [])
+  const hiddenNames = isHiddenControlled ? controlledHiddenNames : internalHiddenNames
+
+  const hideCard = useCallback(
+    (name) => {
+      if (isHiddenControlled) {
+        const next = new Set(controlledHiddenNames)
+        next.add(name)
+        onControlledHiddenChange(next)
+        return
+      }
+      setInternalHiddenNames((prev) => {
+        const next = new Set(prev)
+        next.add(name)
+        saveHiddenToStorage(next)
+        return next
+      })
+    },
+    [isHiddenControlled, controlledHiddenNames, onControlledHiddenChange]
+  )
+
+  const showCard = useCallback(
+    (name) => {
+      if (isHiddenControlled) {
+        const next = new Set(controlledHiddenNames)
+        next.delete(name)
+        onControlledHiddenChange(next)
+        return
+      }
+      setInternalHiddenNames((prev) => {
+        const next = new Set(prev)
+        next.delete(name)
+        saveHiddenToStorage(next)
+        return next
+      })
+    },
+    [isHiddenControlled, controlledHiddenNames, onControlledHiddenChange]
+  )
 
   const showAllCards = useCallback(() => {
-    setHiddenNames(() => {
+    if (isHiddenControlled) {
+      onControlledHiddenChange(new Set())
+      return
+    }
+    setInternalHiddenNames(() => {
       const next = new Set()
       saveHiddenToStorage(next)
       return next
     })
-  }, [])
+  }, [isHiddenControlled, onControlledHiddenChange])
 
   const hideAllCards = useCallback(() => {
-    setHiddenNames(() => {
-      const next = new Set(mcDisplayList.map((r) => r.name))
-      saveHiddenToStorage(next)
-      return next
-    })
-  }, [mcDisplayList])
+    const next = new Set(mcDisplayList.map((r) => r.name))
+    if (isHiddenControlled) {
+      onControlledHiddenChange(next)
+      return
+    }
+    saveHiddenToStorage(next)
+    setInternalHiddenNames(next)
+  }, [isHiddenControlled, onControlledHiddenChange, mcDisplayList])
 
   const visibleRows = useMemo(
     () => mcDisplayList.filter((row) => !hiddenNames.has(row.name)),
@@ -141,109 +272,137 @@ export default function McProtocolCardView({
     [hiddenNames, mcDisplayList]
   )
 
-  return (
-    <section className="parsed-view mc-view mc-protocol-card-section">
-      <div className="parsed-view-header mc-protocol-card-header">
-        <div className="parsed-view-title-row mc-protocol-card-title-row">
-          <div className="mc-protocol-card-title-block">
-            <h2>MC Protocol (card)</h2>
-            <p className="mc-protocol-card-hint">
-              폴링 시작·중지는 &quot;MC Protocol&quot; 탭에서 가능합니다. 숨긴 카드는 이 브라우저에만 저장됩니다.
-            </p>
-          </div>
-          <div className="mc-protocol-card-header-actions">
-            <span
-              className={`mc-protocol-card-pill ${mcConnected ? 'mc-protocol-card-pill--on' : 'mc-protocol-card-pill--off'}`}
+  const columnToolbar = (
+    <div
+      className={`parsed-meta-toolbar mc-protocol-card-toolbar${embedded && !parentHandlesColumns ? ' mc-protocol-card-toolbar--embedded' : ''}`}
+    >
+      <span className="parsed-meta-toolbar-label">표시 열</span>
+      <div className="parsed-meta-toolbar-checks">
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showBitsCol} onChange={(e) => setShowBitsCol(e.target.checked)} /> 2진수
+        </label>
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showHexCol} onChange={(e) => setShowHexCol(e.target.checked)} /> 16진수
+        </label>
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showValueCol} onChange={(e) => setShowValueCol(e.target.checked)} /> 값
+        </label>
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showMetaBit} onChange={(e) => setShowMetaBit(e.target.checked)} /> 비트
+        </label>
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showMetaType} onChange={(e) => setShowMetaType(e.target.checked)} /> 타입
+        </label>
+        <label className="parsed-meta-check-wrap">
+          <input type="checkbox" checked={showMetaDesc} onChange={(e) => setShowMetaDesc(e.target.checked)} /> 설명
+        </label>
+      </div>
+    </div>
+  )
+
+  const hiddenPop =
+    mcDisplayList.length > 0 ? (
+      <details className="mc-protocol-card-hidden-pop">
+        <summary className="mc-protocol-card-hidden-trigger">
+          <span className="mc-protocol-card-hidden-trigger-label">숨김처리 된 항목</span>
+          <span className="mc-protocol-card-hidden-badge">{hiddenList.length}</span>
+          <span className="mc-protocol-card-hidden-chevron" aria-hidden>
+            ▾
+          </span>
+        </summary>
+        <div className="mc-protocol-card-hidden-pop-panel">
+          <div className="mc-protocol-card-bulk-actions">
+            <button
+              type="button"
+              className="mc-protocol-card-bulk-btn"
+              disabled={hiddenList.length === 0}
+              onClick={(e) => {
+                e.preventDefault()
+                showAllCards()
+              }}
             >
-              {mcConnected ? 'MC 폴링 중' : 'MC 미연결'}
-            </span>
-            <button type="button" className="btn btn-secondary" onClick={onOpenMcEdit}>
-              값 편집
+              전체 표시
+            </button>
+            <button
+              type="button"
+              className="mc-protocol-card-bulk-btn"
+              disabled={visibleRows.length === 0}
+              onClick={(e) => {
+                e.preventDefault()
+                hideAllCards()
+              }}
+            >
+              전체 숨기기
             </button>
           </div>
-        </div>
-        <div className="mc-protocol-card-toolbar-wrap">
-          <div className="parsed-meta-toolbar mc-protocol-card-toolbar">
-            <span className="parsed-meta-toolbar-label">표시 열</span>
-            <div className="parsed-meta-toolbar-checks">
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showBitsCol} onChange={(e) => setShowBitsCol(e.target.checked)} /> 2진수
-              </label>
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showHexCol} onChange={(e) => setShowHexCol(e.target.checked)} /> 16진수
-              </label>
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showValueCol} onChange={(e) => setShowValueCol(e.target.checked)} /> 값
-              </label>
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showMetaBit} onChange={(e) => setShowMetaBit(e.target.checked)} /> 비트
-              </label>
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showMetaType} onChange={(e) => setShowMetaType(e.target.checked)} /> 타입
-              </label>
-              <label className="parsed-meta-check-wrap">
-                <input type="checkbox" checked={showMetaDesc} onChange={(e) => setShowMetaDesc(e.target.checked)} /> 설명
-              </label>
+          {hiddenList.length > 0 ? (
+            <div className="mc-protocol-card-hidden-chips">
+              {hiddenList.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="mc-protocol-card-hidden-chip"
+                  title={name}
+                  onClick={() => showCard(name)}
+                >
+                  <IconEye className="mc-protocol-card-hidden-chip-icon" />
+                  <span className="mc-protocol-card-hidden-chip-text">{name}</span>
+                </button>
+              ))}
             </div>
-          </div>
-          {mcDisplayList.length > 0 && (
-            <details className="mc-protocol-card-hidden-pop">
-              <summary className="mc-protocol-card-hidden-trigger">
-                <span className="mc-protocol-card-hidden-trigger-label">숨김처리 된 항목</span>
-                <span className="mc-protocol-card-hidden-badge">{hiddenList.length}</span>
-                <span className="mc-protocol-card-hidden-chevron" aria-hidden>
-                  ▾
-                </span>
-              </summary>
-              <div className="mc-protocol-card-hidden-pop-panel">
-                <div className="mc-protocol-card-bulk-actions">
-                  <button
-                    type="button"
-                    className="mc-protocol-card-bulk-btn"
-                    disabled={hiddenList.length === 0}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      showAllCards()
-                    }}
-                  >
-                    전체 표시
-                  </button>
-                  <button
-                    type="button"
-                    className="mc-protocol-card-bulk-btn"
-                    disabled={visibleRows.length === 0}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      hideAllCards()
-                    }}
-                  >
-                    전체 숨기기
-                  </button>
-                </div>
-                {hiddenList.length > 0 ? (
-                  <div className="mc-protocol-card-hidden-chips">
-                    {hiddenList.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        className="mc-protocol-card-hidden-chip"
-                        title={name}
-                        onClick={() => showCard(name)}
-                      >
-                        <IconEye className="mc-protocol-card-hidden-chip-icon" />
-                        <span className="mc-protocol-card-hidden-chip-text">{name}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mc-protocol-card-hidden-empty">숨긴 카드가 없습니다. 개별 숨기기는 각 카드의 눈 아이콘을 누르세요.</p>
-                )}
-              </div>
-            </details>
+          ) : (
+            <p className="mc-protocol-card-hidden-empty">숨긴 카드가 없습니다. 개별 숨기기는 각 카드의 눈 아이콘을 누르세요.</p>
           )}
         </div>
-        {mcError && <p className="error-message mc-protocol-card-error">{mcError}</p>}
-      </div>
+      </details>
+    ) : null
+
+  const Root = embedded ? 'div' : 'section'
+  const rootClass = embedded
+    ? 'mc-protocol-card-section mc-protocol-card-section--embedded'
+    : 'parsed-view mc-view mc-protocol-card-section'
+
+  return (
+    <Root className={rootClass}>
+      {embedded ? (
+        <>
+          {!parentHandlesColumns ? (
+            <div className="mc-protocol-card-embedded-toolbar">
+              <div className="mc-protocol-card-embedded-toolbar-inner">
+                {columnToolbar}
+                {hiddenPop}
+              </div>
+            </div>
+          ) : null}
+          {mcError ? <p className="error-message mc-protocol-card-error mc-protocol-card-error--embedded">{mcError}</p> : null}
+        </>
+      ) : (
+        <div className="parsed-view-header mc-protocol-card-header">
+          <div className="parsed-view-title-row mc-protocol-card-title-row">
+            <div className="mc-protocol-card-title-block">
+              <h2>MC Protocol (card)</h2>
+              <p className="mc-protocol-card-hint">
+                폴링 시작·중지는 &quot;MC Protocol&quot; 탭에서 가능합니다. 숨긴 카드는 이 브라우저에만 저장됩니다.
+              </p>
+            </div>
+            <div className="mc-protocol-card-header-actions">
+              <span
+                className={`mc-protocol-card-pill ${mcConnected ? 'mc-protocol-card-pill--on' : 'mc-protocol-card-pill--off'}`}
+              >
+                {mcConnected ? 'MC 폴링 중' : 'MC 미연결'}
+              </span>
+              <button type="button" className="btn btn-secondary" onClick={onOpenMcEdit}>
+                값 편집
+              </button>
+            </div>
+          </div>
+          <div className="mc-protocol-card-toolbar-wrap">
+            {columnToolbar}
+            {hiddenPop}
+          </div>
+          {mcError ? <p className="error-message mc-protocol-card-error">{mcError}</p> : null}
+        </div>
+      )}
       <div className="parsed-view-body mc-protocol-card-body">
         {mcDisplayList.length === 0 ? (
           <p className="parsed-view-empty">
@@ -359,6 +518,6 @@ export default function McProtocolCardView({
           </div>
         )}
       </div>
-    </section>
+    </Root>
   )
 }

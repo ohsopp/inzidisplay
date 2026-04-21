@@ -270,6 +270,48 @@
   margin: 0;
 }
 
+.mc-view-subtabs {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem 0.65rem;
+  margin: 0;
+  border-bottom: 1px solid rgba(128, 167, 186, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+}
+
+.mc-view-subtab {
+  border: 1px solid rgba(128, 167, 186, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mc-view-subtab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mc-view-subtab.active {
+  color: var(--text-primary);
+  border-bottom-color: transparent;
+  margin-bottom: -1px;
+  background: rgba(0, 212, 170, 0.08);
+}
+
+.mc-view-title-row--split {
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mc-view-title-row--split h2 {
+  margin: 0;
+}
+
 .parsed-endian-select-wrap {
   display: flex;
   align-items: center;

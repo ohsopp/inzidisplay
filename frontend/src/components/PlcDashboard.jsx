@@ -75,7 +75,7 @@ function toSigned32FromUnsigned(u) {
   return v >= 0x80000000 ? v - 0x100000000 : v
 }
 
-function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
+function PlcDashboard({ mcConnected, mcValues, ioVariableList, onBackToOverview }) {
   const [plcTrend, setPlcTrend] = useState({ spm: [], balanceAir: [], productionRate: [] })
   const [activeTab, setActiveTab] = useState('main')
   const [moldIndex, setMoldIndex] = useState(0)
@@ -514,20 +514,34 @@ function PlcDashboard({ mcConnected, mcValues, ioVariableList }) {
   return (
     <section className="parsed-view plc-view">
       <div className="plc-hero">
-        <div className="plc-title-wrap">
-          <h2>PLC 대시보드</h2>
-          <p>고속프레스 메인 운전 상태</p>
-        </div>
-        <div className="plc-badges">
-          <span className={`status-badge ${mcConnected ? 'online' : 'offline'}`}>
-            {mcConnected ? 'MC 폴링 정상' : 'MC 폴링 미연결'}
-          </span>
-          <span className={`plc-alarm-pill ${activeWarnings.length ? 'danger' : 'safe'}`}>
-            {activeWarnings.length ? `경고 ${activeWarnings.length}건` : '경고 없음'}
-          </span>
+        {onBackToOverview ? (
+          <div className="plc-hero-back-row">
+            <button
+              type="button"
+              className="plc-back-btn"
+              onClick={onBackToOverview}
+              aria-label="카드 요약 대시보드로 돌아가기"
+            >
+              ← 대시보드
+            </button>
+          </div>
+        ) : null}
+        <div className="plc-hero-title-row">
+          <div className="plc-title-wrap">
+            <h2>PLC 운전 상세</h2>
+            <p>고속프레스 메인 운전 상태</p>
+          </div>
+          <div className="plc-badges">
+            <span className={`status-badge ${mcConnected ? 'online' : 'offline'}`}>
+              {mcConnected ? 'MC 폴링 정상' : 'MC 폴링 미연결'}
+            </span>
+            <span className={`plc-alarm-pill ${activeWarnings.length ? 'danger' : 'safe'}`}>
+              {activeWarnings.length ? `경고 ${activeWarnings.length}건` : '경고 없음'}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="plc-subtabs" role="tablist" aria-label="PLC 대시보드 탭">
+      <div className="plc-subtabs" role="tablist" aria-label="PLC 운전 상세 탭">
         <button type="button" className={`plc-subtab ${activeTab === 'main' ? 'active' : ''}`} onClick={() => setActiveTab('main')}>메인</button>
         <button type="button" className={`plc-subtab ${activeTab === 'mold' ? 'active' : ''}`} onClick={() => setActiveTab('mold')}>금형데이터</button>
         <button type="button" className={`plc-subtab ${activeTab === 'counter' ? 'active' : ''}`} onClick={() => setActiveTab('counter')}>생산카운터</button>

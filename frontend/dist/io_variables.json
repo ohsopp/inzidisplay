@@ -849,49 +849,49 @@
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 기준 슬라이드 행정 수 (BCD TYPE)"
+    "description": "금일 기준 슬라이드 행정 수를 표시"
   },
   "todayStrokeCount_D1821": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 기준 슬라이드 행정 수 (BCD TYPE)"
+    "description": "금일 기준 슬라이드 행정 수를 표시"
   },
   "todayRunningTimeSec_D1054": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 초 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (초)"
   },
   "todayRunningTimeSec_D1055": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 초 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (초)"
   },
   "todayRunningTimeHour_D1056": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 시 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (시)"
   },
   "todayRunningTimeHour_D1057": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 시 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (시)"
   },
   "todayRunningTimeMin_D1058": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 분 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (분)"
   },
   "todayRunningTimeMin_D1059": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": "금일 가동시간 — 분 (BCD TYPE)"
+    "description": "금일 기준 모터 기동 시간을 표시 (분)"
   },
   "productionCounter_D1810": {
     "length": 16,
@@ -945,12 +945,12 @@
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": ""
+    "description": "현재까지 타발된수 (current production과 별개)"
   },
   "production_D1819": {
     "length": 16,
     "dataType": "Dword",
     "scale": "1",
-    "description": ""
+    "description": "현재까지 타발된수 (current production과 별개)"
   }
 }
