@@ -272,8 +272,9 @@
 
 .mc-view-subtabs {
   display: flex;
+  align-items: flex-end;
   gap: 0.4rem;
-  padding: 0.5rem 1rem 0.65rem;
+  padding: 0.5rem 1rem 0;
   margin: 0;
   border-bottom: 1px solid rgba(128, 167, 186, 0.2);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
@@ -281,6 +282,8 @@
 
 .mc-view-subtab {
   border: 1px solid rgba(128, 167, 186, 0.28);
+  border-bottom-color: transparent;
+  margin-bottom: -1px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
   border-radius: 8px 8px 0 0;
@@ -297,8 +300,6 @@
 
 .mc-view-subtab.active {
   color: var(--text-primary);
-  border-bottom-color: transparent;
-  margin-bottom: -1px;
   background: rgba(0, 212, 170, 0.08);
 }
 
